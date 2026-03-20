@@ -1,14 +1,14 @@
-# FastAPI-Agentic-Starter
+# ALMS
 
 > **The AI-First Backend for Scalable, Intelligent Applications.**
 
 <p align="center">
-  <img src="assets/images/asset_image_01.png" width="800" alt="FastAPI Agentic Starter Hero">
+  <img src="assets/images/asset_image_01.png" width="800" alt="ALMS Hero">
 </p>
 
 ## Introduction
 
-**FastAPI-Agentic-Starter** is a production-ready boilerplate designed for building robust, AI-powered backends. Built with an "AI-First" philosophy, it combines the performance of FastAPI with **ALMS** (Agentic Layer for Microservices) - a pragmatic layered architecture that treats LLM interactions as first-class citizens.
+**ALMS** is a production-ready boilerplate designed for building robust, AI-powered backends. Built with an "AI-First" philosophy, it combines the performance of FastAPI with **ALMS** (Agentic Layer for Microservices) - a pragmatic layered architecture that treats LLM interactions as first-class citizens.
 
 Whether you're building autonomous agents, RAG pipelines, or intelligent APIs, this starter kit provides the scalability and clean code structure you need to move fast without over-engineering.
 
