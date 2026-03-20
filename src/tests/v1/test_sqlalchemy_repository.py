@@ -16,10 +16,10 @@ from src.database.repositories.sqlalchemy_repository import SQLAlchemyRepository
 Base = declarative_base()
 
 
-class TestModel(Base):
-    """Test SQLAlchemy model."""
+class SampleModel(Base):
+    """Sample SQLAlchemy model for testing."""
 
-    __tablename__ = "test_items"
+    __tablename__ = "sample_items"
 
     id = Column(Integer, primary_key=True)
     name = Column(String(50))
@@ -45,13 +45,13 @@ class TestSQLAlchemyRepository:
     @pytest.fixture
     def repository(self, mock_session):
         """Create repository with mock session."""
-        return SQLAlchemyRepository(TestModel, mock_session)
+        return SQLAlchemyRepository(SampleModel, mock_session)
 
     @pytest.mark.asyncio
     async def test_get_by_id(self, repository, mock_session):
         """Test retrieving a record by ID."""
         # Arrange
-        expected_result = TestModel(id=1, name="Test", value="Value")
+        expected_result = SampleModel(id=1, name="Test", value="Value")
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = expected_result
         mock_session.execute.return_value = mock_result
@@ -84,8 +84,8 @@ class TestSQLAlchemyRepository:
         """Test retrieving all records with pagination."""
         # Arrange
         items = [
-            TestModel(id=1, name="Item 1", value="Value 1"),
-            TestModel(id=2, name="Item 2", value="Value 2"),
+            SampleModel(id=1, name="Item 1", value="Value 1"),
+            SampleModel(id=2, name="Item 2", value="Value 2"),
         ]
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = items
@@ -102,7 +102,7 @@ class TestSQLAlchemyRepository:
     async def test_create_record(self, repository, mock_session):
         """Test creating a new record."""
         # Arrange
-        new_item = TestModel(name="New Item", value="New Value")
+        new_item = SampleModel(name="New Item", value="New Value")
 
         # Act
         result = await repository.create(new_item)
@@ -116,7 +116,7 @@ class TestSQLAlchemyRepository:
     async def test_update_record(self, repository, mock_session):
         """Test updating an existing record."""
         # Arrange
-        existing = TestModel(id=1, name="Old Name", value="Old Value")
+        existing = SampleModel(id=1, name="Old Name", value="Old Value")
 
         # Mock get to return the existing record
         mock_result = MagicMock()
@@ -164,7 +164,7 @@ class TestSQLAlchemyRepository:
     async def test_get_by_field(self, repository, mock_session):
         """Test retrieving record by field value."""
         # Arrange
-        expected = TestModel(id=1, name="unique_name", value="Value")
+        expected = SampleModel(id=1, name="unique_name", value="Value")
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = expected
         mock_session.execute.return_value = mock_result
@@ -181,7 +181,7 @@ class TestSQLAlchemyRepository:
         """Test checking if record exists."""
         # Arrange
         mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = TestModel(id=1)
+        mock_result.scalar_one_or_none.return_value = SampleModel(id=1)
         mock_session.execute.return_value = mock_result
 
         # Act
@@ -194,7 +194,7 @@ class TestSQLAlchemyRepository:
     async def test_count(self, repository, mock_session):
         """Test counting total records."""
         # Arrange
-        items = [TestModel(id=i) for i in range(5)]
+        items = [SampleModel(id=i) for i in range(5)]
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = items
         mock_session.execute.return_value = mock_result
@@ -213,7 +213,7 @@ class TestSQLAlchemyRepositoryEdgeCases:
     async def test_get_with_invalid_id(self, mock_session):
         """Test get with invalid ID."""
         # Arrange
-        repository = SQLAlchemyRepository(TestModel, mock_session)
+        repository = SQLAlchemyRepository(SampleModel, mock_session)
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
         mock_session.execute.return_value = mock_result
@@ -228,8 +228,8 @@ class TestSQLAlchemyRepositoryEdgeCases:
     async def test_create_with_none_values(self, mock_session):
         """Test create with None values."""
         # Arrange
-        repository = SQLAlchemyRepository(TestModel, mock_session)
-        item = TestModel(name=None, value=None)
+        repository = SQLAlchemyRepository(SampleModel, mock_session)
+        item = SampleModel(name=None, value=None)
 
         # Act
         result = await repository.create(item)
