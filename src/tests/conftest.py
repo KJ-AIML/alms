@@ -28,10 +28,22 @@ from src.database.connection import get_db, Base
 def client():
     """
     Create a TestClient with API key header if configured.
+    Falls back to test-api-key if none configured.
     """
-    headers = {"X-API-KEY": settings.X_API_KEY} if settings.X_API_KEY else {}
+    # Use configured API key or default test key
+    api_key = settings.X_API_KEY or "test-api-key"
+    headers = {"X-API-Key": api_key}
 
     with TestClient(app, headers=headers) as c:
+        yield c
+
+
+@pytest.fixture
+def client_no_auth():
+    """
+    Create a TestClient without authentication headers.
+    """
+    with TestClient(app) as c:
         yield c
 
 
