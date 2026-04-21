@@ -2,6 +2,26 @@
 
 > **The AI-First Backend for Scalable, Intelligent Applications.**
 
+## Quick Start with CLI
+
+Create a new ALMS project in seconds:
+
+```bash
+# Install the CLI
+pip install alms-cli
+
+# Create a new project
+alms init my-project
+
+# Or run without installing
+uvx --from alms-cli alms init my-project
+```
+
+The CLI features:
+- Beautiful terminal UI with interactive prompts
+- Feature selection (Database, Redis, AI Agents, Observability, Docker, CI/CD)
+- Complete project scaffolding ready to run
+
 ## Introduction
 
 **ALMS** is a production-ready boilerplate designed for building robust, AI-powered backends. Built with an "AI-First" philosophy, it combines the performance of FastAPI with **ALMS** (Agentic Layer for Microservices) - a pragmatic layered architecture that treats LLM interactions as first-class citizens.
