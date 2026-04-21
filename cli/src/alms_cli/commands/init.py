@@ -24,17 +24,17 @@ console = Console()
 
 custom_style = Style([
     ("qmark", "fg:#FFFFFF"),
-    ("question", "fg:#FFFFFF"),
+    ("question", "fg:#FFFFFF nobold"),
     ("answer", "fg:#FFFFFF"),
-    ("pointer", "fg:#FFFFFF"),
-    ("highlighted", "fg:#FFFFFF"),
-    ("selected", "fg:#FFFFFF"),
+    ("pointer", "fg:#22C55E nobold"),
+    ("highlighted", "fg:#FFFFFF nobold"),
+    ("selected", "fg:#FFFFFF nobold"),
     ("separator", "fg:#666666"),
     ("instruction", "fg:#888888"),
-    ("text", "fg:#FFFFFF"),
+    ("text", "fg:#FFFFFF nobold"),
     ("disabled", "fg:#666666 italic"),
-    ("checkbox", "fg:#FFFFFF"),
-    ("checkbox.selected", "fg:#FFFFFF"),
+    ("checkbox", "fg:#666666 nobold"),
+    ("checkbox.selected", "fg:#22C55E nobold"),
 ])
 
 
@@ -95,31 +95,17 @@ def init_command(
             ("CI/CD (GitHub Actions)", True),
         ]
         
-        selected = set()
-        for i, (_, default) in enumerate(feature_choices):
-            if default:
-                selected.add(i)
-        
-        while True:
-            for i, (name, _) in enumerate(feature_choices):
-                marker = "[bold green]✓[/bold green]" if i in selected else "[dim]○[/dim]"
-                console.print(f"  {marker} {name}")
-            
-            console.print()
-            try:
-                choice = input("Toggle (1-6) or Enter to continue: ").strip()
-                if not choice:
-                    break
-                idx = int(choice) - 1
-                if 0 <= idx < len(feature_choices):
-                    if idx in selected:
-                        selected.remove(idx)
-                    else:
-                        selected.add(idx)
-            except (ValueError, KeyboardInterrupt):
-                break
-        
-        features = [feature_choices[i][0] for i in selected]
+        selected_features = questionary.checkbox(
+            "Features:",
+            choices=[
+                questionary.Choice(title=feature_name, checked=default_enabled)
+                for feature_name, default_enabled in feature_choices
+            ],
+            style=custom_style,
+            instruction="(Use arrow keys to move, <space> to select, <a> to toggle, <i> to invert)",
+        ).ask()
+
+        features = selected_features or []
     
     console.print()
     print_step(1, 4, f"Creating project structure in {project_path}")
