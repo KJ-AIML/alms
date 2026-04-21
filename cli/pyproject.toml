@@ -1,0 +1,48 @@
+[project]
+name = "alms-cli"
+version = "0.1.5"
+description = "ALMS CLI - Beautiful project scaffolding tool for AI-first backends"
+readme = "README.md"
+requires-python = ">=3.13"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["cli", "scaffolding", "fastapi", "ai", "backend", "starter-kit", "alms"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Code Generators",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+dependencies = [
+    "typer>=0.12.0",
+    "rich>=13.7.0",
+    "questionary>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/KJ-AIML/alms"
+Repository = "https://github.com/KJ-AIML/alms"
+Documentation = "https://github.com/KJ-AIML/alms#readme"
+"Bug Tracker" = "https://github.com/KJ-AIML/alms/issues"
+
+[project.scripts]
+alms = "alms_cli.main:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/alms_cli"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/README.md",
+    "/LICENSE",
+]

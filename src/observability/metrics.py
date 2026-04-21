@@ -181,7 +181,8 @@ agent_tools_used_total = Counter(
 
 
 def setup_metrics(
-    service_name: str = "fastapi-agentic-starter", service_version: str = "1.0.0"
+    service_name: str = settings.SERVICE_NAME,
+    service_version: str = settings.APP_VERSION,
 ):
     """Initialize metrics with service information."""
     service_info.info(

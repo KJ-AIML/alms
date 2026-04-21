@@ -8,6 +8,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 class Settings(BaseSettings):
+    # Application identity
+    APP_NAME: str = "ALMS"
+    APP_DESCRIPTION: str = "Backend API for ALMS"
+    APP_VERSION: str = "0.1.0"
+    SERVICE_NAME: str = "alms"
+
     # OpenAI settings
     OPENAI_API_KEY: str | None = None
     OPENAI_MODEL_BASIC: str | None = None
@@ -28,6 +34,7 @@ class Settings(BaseSettings):
     DATABASE_NAME: str = "db"
     DATABASE_USER: str = "postgres"
     DATABASE_PASSWORD: str = "postgres"
+    DATABASE_URL: str | None = None
 
     # API settings
     API_PREFIX: str = "/api"
@@ -55,7 +62,7 @@ class Settings(BaseSettings):
     ALLOWED_HOSTS: List[str] = ["*"]
 
     # Security settings
-    X_API_KEY: str | None = "your-api-key-here"
+    X_API_KEY: str | None = None
 
     # Observability settings
     OTLP_ENDPOINT: str | None = None  # e.g., "http://localhost:4317" for Jaeger/Tempo
@@ -65,6 +72,16 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return not self.DEBUG
+
+    @property
+    def database_url(self) -> str:
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+
+        return (
+            f"postgresql+asyncpg://{self.DATABASE_USER}:{self.DATABASE_PASSWORD}"
+            f"@{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_NAME}"
+        )
 
     class Config:
         env_file = BASE_DIR / ".env"

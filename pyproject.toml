@@ -1,7 +1,7 @@
 [project]
-name = "fastapi-agentic-starter"
+name = "alms"
 version = "0.1.0"
-description = "Starter for FastAPI Agentic"
+description = "ALMS AI-first backend starter"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
