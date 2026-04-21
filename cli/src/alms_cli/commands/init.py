@@ -23,18 +23,18 @@ from alms_cli.templates import TemplateGenerator
 console = Console()
 
 custom_style = Style([
-    ("qmark", "fg:#5B8DEF bold"),
-    ("question", "fg:#FFFFFF bold"),
-    ("answer", "fg:#5B8DEF bold"),
-    ("pointer", "fg:#5B8DEF bold"),
-    ("highlighted", "fg:#5B8DEF bold"),
-    ("selected", "fg:#5B8DEF"),
+    ("qmark", "fg:#5B8DEF"),
+    ("question", "fg:#FFFFFF"),
+    ("answer", "fg:#5B8DEF"),
+    ("pointer", "fg:#5B8DEF"),
+    ("highlighted", "fg:#FFFFFF"),
+    ("selected", "fg:#FFFFFF"),
     ("separator", "fg:#666666"),
     ("instruction", "fg:#888888"),
     ("text", "fg:#FFFFFF"),
     ("disabled", "fg:#666666 italic"),
     ("checkbox", "fg:#5B8DEF"),
-    ("checkbox.selected", "fg:#5B8DEF bold"),
+    ("checkbox.selected", "fg:#5B8DEF"),
 ])
 
 
