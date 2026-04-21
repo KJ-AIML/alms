@@ -16,6 +16,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
 from src.config.logs_config import get_logger
+from src.config.settings import settings
 from src.observability.metrics import (
     http_requests_total,
     http_request_duration_seconds,
@@ -43,7 +44,6 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.exclude_paths = exclude_paths or [
             "/metrics",
-            "/health",
             "/docs",
             "/openapi.json",
         ]
@@ -51,7 +51,9 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # Skip observability for excluded paths
         path = request.url.path
-        if any(path.startswith(excluded) for excluded in self.exclude_paths):
+        if path.startswith(f"{settings.API_PREFIX}/v1/health") or any(
+            path.startswith(excluded) for excluded in self.exclude_paths
+        ):
             return await call_next(request)
 
         # Generate or get request ID

@@ -39,8 +39,8 @@ _tracer_provider: Optional[TracerProvider] = None
 
 
 def setup_tracing(
-    service_name: str = "fastapi-agentic-starter",
-    service_version: str = "1.0.0",
+    service_name: str = settings.SERVICE_NAME,
+    service_version: str = settings.APP_VERSION,
     otlp_endpoint: Optional[str] = None,
     console_export: bool = False,
 ) -> TracerProvider:

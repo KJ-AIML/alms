@@ -21,16 +21,19 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     """Lifespan events for the FastAPI application"""
     # Startup
-    logger.info("Starting FastAPI Agentic Starter")
+    logger.info(f"Starting {settings.APP_NAME}")
 
     # Initialize observability
-    setup_metrics(service_name="fastapi-agentic-starter", service_version="1.0.0")
+    setup_metrics(
+        service_name=settings.SERVICE_NAME,
+        service_version=settings.APP_VERSION,
+    )
 
     # Setup tracing (OTLP endpoint from env or console in debug)
     otlp_endpoint = getattr(settings, "OTLP_ENDPOINT", None)
     setup_tracing(
-        service_name="fastapi-agentic-starter",
-        service_version="1.0.0",
+        service_name=settings.SERVICE_NAME,
+        service_version=settings.APP_VERSION,
         otlp_endpoint=otlp_endpoint,
         console_export=settings.DEBUG,
     )
@@ -41,16 +44,16 @@ async def lifespan(app: FastAPI):
     logger.info("Observability initialized - Tracing and Metrics ready")
     yield
     # Shutdown
-    logger.info("Shutting down FastAPI Agentic Starter")
+    logger.info(f"Shutting down {settings.APP_NAME}")
 
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application"""
 
     app = FastAPI(
-        title="FastAPI Agentic Starter",
-        description="Backend API for FastAPI Agentic Starter",
-        version="1.0.0",
+        title=settings.APP_NAME,
+        description=settings.APP_DESCRIPTION,
+        version=settings.APP_VERSION,
         lifespan=lifespan,
         docs_url=None,  # Disable default Swagger UI
         redoc_url=None,  # Disable ReDoc
@@ -79,8 +82,9 @@ def create_app() -> FastAPI:
     @app.get("/")
     async def check():
         return {
-            "status": "healthy",
-            "service": "FastAPI Agentic Starter",
+            "status": "alive",
+            "service": settings.APP_NAME,
+            "version": settings.APP_VERSION,
         }
 
     # Scalar API Documentation

@@ -1,14 +1,12 @@
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 from src.config.settings import settings
 
-# Database URL for async connection
-DATABASE_URL = f"postgresql+asyncpg://{settings.DATABASE_USER}:{settings.DATABASE_PASSWORD}@{settings.DATABASE_HOST}:{settings.DATABASE_PORT}/{settings.DATABASE_NAME}"
-
 # Create async engine
 engine = create_async_engine(
-    DATABASE_URL,
+    settings.database_url,
     echo=settings.DEBUG,
     future=True,
     pool_pre_ping=True,
@@ -28,6 +26,16 @@ class Base(DeclarativeBase):
     """Base class for all models"""
 
     pass
+
+
+async def check_database_connection() -> bool:
+    """Run a lightweight readiness check against the configured database."""
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
 
 
 async def get_db():
