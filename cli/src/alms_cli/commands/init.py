@@ -86,20 +86,40 @@ def init_command(
         print_info("Select features to include:")
         console.print()
         
-        answers = questionary.checkbox(
-            "Features:",
-            choices=[
-                questionary.Choice("Database (PostgreSQL)", checked=True),
-                questionary.Choice("Redis Cache", checked=True),
-                questionary.Choice("AI Agents (LangChain)", checked=True),
-                questionary.Choice("Observability (OpenTelemetry)", checked=True),
-                questionary.Choice("Docker Support", checked=True),
-                questionary.Choice("CI/CD (GitHub Actions)", checked=True),
-            ],
-            style=custom_style,
-        ).ask()
+        feature_choices = [
+            ("Database (PostgreSQL)", True),
+            ("Redis Cache", True),
+            ("AI Agents (LangChain)", True),
+            ("Observability (OpenTelemetry)", True),
+            ("Docker Support", True),
+            ("CI/CD (GitHub Actions)", True),
+        ]
         
-        features = [a for a in (answers or [])]
+        selected = set()
+        for i, (_, default) in enumerate(feature_choices):
+            if default:
+                selected.add(i)
+        
+        while True:
+            for i, (name, _) in enumerate(feature_choices):
+                marker = "[bold green]✓[/bold green]" if i in selected else "[dim]○[/dim]"
+                console.print(f"  {marker} {name}")
+            
+            console.print()
+            try:
+                choice = input("Toggle (1-6) or Enter to continue: ").strip()
+                if not choice:
+                    break
+                idx = int(choice) - 1
+                if 0 <= idx < len(feature_choices):
+                    if idx in selected:
+                        selected.remove(idx)
+                    else:
+                        selected.add(idx)
+            except (ValueError, KeyboardInterrupt):
+                break
+        
+        features = [feature_choices[i][0] for i in selected]
     
     console.print()
     print_step(1, 4, f"Creating project structure in {project_path}")
