@@ -102,6 +102,20 @@ alms/
 
 ## Directory Responsibilities
 
+### `/.agents/skills` - Repo-Packaged Agent Skills
+
+**Purpose:** Local skills that help LLM coding agents work inside this repository with the intended ALMS conventions.
+
+**Key Files:**
+- `.agents/skills/alms-dev/SKILL.md` - General ALMS development guidance
+- `.agents/skills/alms-dev/references/alms-dev-patterns.md` - Layer recipes, templates, naming, tests, and documentation rules
+
+**Rules:**
+- Keep repo-packaged skills focused on helping agents modify this project correctly
+- Use `alms-dev` for normal ALMS backend development
+- Use the separate public `alms-langgraph-agent` skill for LangGraph-specific workflow implementation
+- Update the skill when ALMS architecture or file placement rules change
+
 ### `/src/api` - API Layer
 
 **Purpose:** HTTP request handling, routing, middleware, and validation

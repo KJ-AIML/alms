@@ -22,6 +22,22 @@ The CLI features:
 - Feature selection (Database, Redis, AI Agents, Observability, Docker, CI/CD)
 - Complete project scaffolding ready to run
 
+## Bundled Agent Skills
+
+ALMS includes a repo-packaged agent skill for LLM coding assistants:
+
+```text
+.agents/skills/alms-dev
+```
+
+Use `alms-dev` when asking an AI coding agent to add endpoints, usecases, actions, repositories, providers, settings, middleware, tests, or docs in this repo. The skill teaches the ALMS layer boundaries and keeps generated code aligned with the project structure.
+
+For LangGraph-specific agent workflow work, use the separate public skill:
+
+```bash
+npx skills add KJ-AIML/alms-langgraph-agent-skill
+```
+
 ## Introduction
 
 **ALMS** is a production-ready boilerplate designed for building robust, AI-powered backends. Built with an "AI-First" philosophy, it combines the performance of FastAPI with **ALMS** (Agentic Layer for Microservices) - a pragmatic layered architecture that treats LLM interactions as first-class citizens.

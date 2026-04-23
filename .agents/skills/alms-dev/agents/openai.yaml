@@ -1,0 +1,4 @@
+interface:
+  display_name: "ALMS Development"
+  short_description: "Develop services in ALMS structure"
+  default_prompt: "Use $alms-dev to build or modify this service using ALMS architecture."

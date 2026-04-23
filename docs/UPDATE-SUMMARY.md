@@ -1,5 +1,21 @@
 ## Documentation Update Summary
 
+### Files Updated (Unreleased - April 23, 2026)
+
+1. **.agents/skills/alms-dev/** (NEW)
+   - Added repo-packaged `alms-dev` skill for LLM coding agents
+   - Captures general ALMS development structure, layer rules, naming, tests, and feature recipes
+   - Keeps LangGraph-specific guidance separate from normal ALMS backend development
+
+2. **README.md**
+   - Added Bundled Agent Skills section
+   - Documented `.agents/skills/alms-dev`
+   - Linked the separate public `alms-langgraph-agent-skill` install command
+
+3. **docs/05-Project-Structure.md**
+   - Added `.agents/skills` directory responsibility section
+   - Documented how repo-packaged skills should be maintained
+
 ### Files Updated (v0.2.0 - March 20, 2026)
 
 1. ✅ **docs/04-Tech-Stack.md**
