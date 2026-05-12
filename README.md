@@ -38,6 +38,12 @@ For LangGraph-specific agent workflow work, use the separate public skill:
 npx skills add KJ-AIML/alms-langgraph-agent-skill
 ```
 
+Use both skills together when a change touches normal ALMS backend layers and production LangGraph workflows. The intended flow is:
+
+```text
+API Endpoint -> UseCase -> Action -> Agent or LangGraph Workflow
+```
+
 ## Introduction
 
 **ALMS** is a production-ready boilerplate designed for building robust, AI-powered backends. Built with an "AI-First" philosophy, it combines the performance of FastAPI with **ALMS** (Agentic Layer for Microservices) - a pragmatic layered architecture that treats LLM interactions as first-class citizens.
@@ -156,9 +162,16 @@ fastapi-agentic-starter/
 │   │   ├── agent_manager/
 │   │   │   └── agent.py          # Agent definitions
 │   │   ├── prompts/
-│   │   │   └── sample_agent_prompt.py
+│   │   │   ├── prompt_manager.py # Markdown prompt loader
+│   │   │   └── agents/
+│   │   │       └── agent_sample.md
+│   │   ├── schemas/              # Structured agent output schemas
 │   │   ├── tools/                # Agent tools (empty)
-│   │   └── workflows/            # LangGraph workflows (empty)
+│   │   └── workflows/            # LangGraph workflows
+│   │       └── sample/
+│   │           ├── state.py
+│   │           ├── nodes.py
+│   │           └── build.py
 │   ├── providers/                # Infrastructure Providers
 │   │   └── ai/
 │   │       └── langchain_model_loader.py
@@ -523,12 +536,40 @@ with tracer.start_as_current_span("my_operation") as span:
 
 ## Creating a New Agent
 
-1. **Define the agent** in `src/agents/agent_manager/`:
+New agent features should keep HTTP, orchestration, execution, and AI behavior in separate layers:
+
+```text
+Endpoint -> UseCase -> Action -> Agent or Workflow
+```
+
+1. **Define the prompt** in `src/agents/prompts/agents/`:
+
+```markdown
+<!-- src/agents/prompts/agents/agent_my_agent.md -->
+You are a helpful assistant for this feature.
+```
+
+2. **Register the prompt** in `src/agents/prompts/prompt_manager.py`:
+
+```python
+class PromptManager:
+    def __init__(self) -> None:
+        self._my_agent: str | None = None
+
+    @property
+    def my_agent(self) -> str:
+        if self._my_agent is None:
+            self._my_agent = self._load_prompt("agents/agent_my_agent.md")
+        return self._my_agent
+```
+
+3. **Define the agent** in `src/agents/agent_manager/`:
 
 ```python
 # src/agents/agent_manager/my_agent.py
 from langchain_openai import ChatOpenAI
 from src.config.settings import settings
+from src.agents.prompts.prompt_manager import prompt_manager
 
 llm = ChatOpenAI(
     model=settings.OPENAI_MODEL_BASIC,
@@ -540,48 +581,69 @@ class MyAgent:
         self.llm = llm
     
     async def process(self, query: str) -> str:
-        response = await self.llm.ainvoke(query)
+        response = await self.llm.ainvoke(
+            [
+                ("system", prompt_manager.my_agent),
+                ("user", query),
+            ]
+        )
         return response.content
 ```
 
-2. **Create use case** in `src/execution/usecases/`:
+4. **Create an action** in `src/execution/actions/`:
 
 ```python
-# src/execution/usecases/my_usecase.py
+# src/execution/actions/process_my_agent_action.py
 from src.agents.agent_manager.my_agent import MyAgent
 
-class MyUsecase:
-    def __init__(self):
-        self.agent = MyAgent()
-    
-    async def execute(self, query: str):
+class ProcessMyAgentAction:
+    def __init__(self, agent: MyAgent | None = None):
+        self.agent = agent or MyAgent()
+
+    async def execute(self, query: str) -> dict:
         result = await self.agent.process(query)
         return {"response": result}
 ```
 
-3. **Create endpoint** in `src/api/endpoints/v1/`:
+5. **Create use case** in `src/execution/usecases/`:
+
+```python
+# src/execution/usecases/process_my_agent_usecase.py
+from src.execution.actions.process_my_agent_action import ProcessMyAgentAction
+
+class ProcessMyAgentUseCase:
+    def __init__(self, action: ProcessMyAgentAction | None = None):
+        self.action = action or ProcessMyAgentAction()
+    
+    async def execute(self, query: str) -> dict:
+        return await self.action.execute(query)
+```
+
+6. **Create endpoint** in `src/api/endpoints/v1/`:
 
 ```python
 # src/api/endpoints/v1/my_endpoint.py
 from fastapi import APIRouter
-from src.execution.usecases.my_usecase import MyUsecase
 from src.api.endpoints.v1.schemas.base import AppResponse
+from src.execution.usecases.process_my_agent_usecase import ProcessMyAgentUseCase
 
 router = APIRouter()
 
 @router.post("/my-agent")
 async def my_agent_endpoint(query: str):
-    usecase = MyUsecase()
+    usecase = ProcessMyAgentUseCase()
     result = await usecase.execute(query)
     return AppResponse(success=True, data=result)
 ```
 
-4. **Register router** in `src/api/endpoints/v1/routers.py`:
+7. **Register router** in `src/api/endpoints/v1/routers.py`:
 
 ```python
 from src.api.endpoints.v1 import my_endpoint
 v1_router.include_router(my_endpoint.router, prefix="/my-agent")
 ```
+
+For multi-step or auditable LangGraph workflows, place the workflow under `src/agents/workflows/<feature>/` with `state.py`, `nodes.py`, and `build.py`, then invoke the compiled workflow from an action class.
 
 ## Scaling to Microservices
 

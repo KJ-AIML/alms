@@ -1,7 +1,5 @@
-from textwrap import dedent
+from src.agents.prompts.prompt_manager import prompt_manager
 
 
 def get_prompt_sample_agent():
-    return dedent("""
-        You are a helpful assistant.
-    """)
+    return prompt_manager.sample_agent

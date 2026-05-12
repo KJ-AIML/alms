@@ -1,7 +1,7 @@
 # 05 - Project Structure
 
 > **Last Updated:** March 20, 2026  
-> **Version:** 0.1.0  
+> **Version:** 0.2.1  
 > **Status:** ✅ Active
 
 ```
@@ -69,9 +69,16 @@ alms/
     │   ├── agent_manager/              # Agent definitions
     │   │   └── agent.py                # Sample agent
     │   ├── prompts/                    # Agent prompts
-    │   │   └── sample_agent_prompt.py
+    │   │   ├── prompt_manager.py       # Markdown prompt loader
+    │   │   └── agents/
+    │   │       └── agent_sample.md
+    │   ├── schemas/                    # Structured agent output schemas
     │   ├── tools/                      # Agent tools
     │   └── workflows/                  # LangGraph workflows
+    │       └── sample/
+    │           ├── state.py
+    │           ├── nodes.py
+    │           └── build.py
     ├── providers/                      # Infrastructure Providers
     │   ├── ai/                         # AI model providers
     │   │   └── langchain_model_loader.py
@@ -368,10 +375,13 @@ Infrastructure (Providers, Database, Core)
 
 ### 3. New AI Agent
 
-1. Define agent in `src/agents/agent_manager/`
-2. Add prompts in `src/agents/prompts/`
-3. Add tools in `src/agents/tools/`
-4. Create usecase that uses the agent
+1. Define prompts as markdown in `src/agents/prompts/agents/`
+2. Register prompts in `src/agents/prompts/prompt_manager.py`
+3. Define agent or structured-output agent access in `src/agents/agent_manager/`
+4. Add tools in `src/agents/tools/` when deterministic helpers are needed
+5. For LangGraph workflows, create `src/agents/workflows/<feature>/state.py`, `nodes.py`, and `build.py`
+6. Create an action that invokes the agent or compiled workflow
+7. Create a usecase that orchestrates the action
 
 ### 4. New Database Entity
 
@@ -403,4 +413,4 @@ Infrastructure (Providers, Database, Core)
    - Clear naming
    - Comprehensive documentation
 
-**Updated:** v0.1.0 - Initial ALMS project structure
+**Updated:** v0.2.1 - Added agent prompt manager, schemas, and sample workflow skeleton

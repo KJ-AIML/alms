@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # Application identity
     APP_NAME: str = "ALMS"
     APP_DESCRIPTION: str = "Backend API for ALMS"
-    APP_VERSION: str = "0.1.0"
+    APP_VERSION: str = "0.2.1"
     SERVICE_NAME: str = "alms"
 
     # OpenAI settings

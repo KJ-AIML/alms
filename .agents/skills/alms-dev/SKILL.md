@@ -27,6 +27,9 @@ Read [references/alms-dev-patterns.md](references/alms-dev-patterns.md) when add
    - Business orchestration: `src/execution/usecases/`
    - Single operations: `src/execution/actions/`
    - LLM prompts/tools/workflows: `src/agents/`
+   - Agent markdown prompts: `src/agents/prompts/agents/`
+   - Prompt loading: `src/agents/prompts/prompt_manager.py`
+   - Structured agent outputs: `src/agents/schemas/`
    - External services: `src/providers/`
    - Database access: `src/database/repositories/`
    - Domain models: `src/models/`

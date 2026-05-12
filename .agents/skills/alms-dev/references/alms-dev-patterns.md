@@ -20,7 +20,11 @@ src/
     actions/                   # discrete operations
   agents/                      # AI agent layer
     agent_manager/             # agent definitions/managers
-    prompts/                   # prompt templates
+    prompts/                   # prompt manager and markdown templates
+      prompt_manager.py
+      agents/
+        agent_<thing>.md
+    schemas/                   # structured agent output schemas
     tools/                     # agent tools
     workflows/                 # LangGraph workflows
   providers/                   # external service integrations
