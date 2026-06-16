@@ -10,7 +10,9 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 
-def _health_payload(status_text: str, ready: bool, dependencies: dict | None = None) -> dict:
+def _health_payload(
+    status_text: str, ready: bool, dependencies: dict | None = None
+) -> dict:
     return {
         "status": status_text,
         "version": settings.APP_VERSION,
@@ -29,8 +31,11 @@ async def live_check():
 
 @router.get("/ready", response_model=AppResponse[dict], status_code=status.HTTP_200_OK)
 async def ready_check():
-    """Readiness probe that verifies critical dependencies."""
+    """Readiness probe that verifies enabled dependencies."""
     logger.debug("Readiness probe requested")
+
+    if not settings.DATABASE_ENABLED:
+        return AppResponse(success=True, data=_health_payload("ready", ready=True))
 
     db_ready = await check_database_connection()
     payload = _health_payload(

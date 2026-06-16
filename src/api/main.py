@@ -23,6 +23,9 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info(f"Starting {settings.APP_NAME}")
 
+    # Fail fast on unsafe production defaults before anything else starts
+    settings.validate_production_settings()
+
     # Initialize observability
     setup_metrics(
         service_name=settings.SERVICE_NAME,

@@ -4,9 +4,10 @@ from typing import Any, ClassVar, Dict, Optional
 from langchain.chat_models import init_chat_model
 
 from src.config.settings import settings
+from src.providers.ai.base import AIModelProvider
 
 
-class LangchainModelLoader:
+class LangchainModelLoader(AIModelProvider):
     _instance: ClassVar[Optional["LangchainModelLoader"]] = None
 
     def __new__(cls) -> "LangchainModelLoader":
@@ -51,3 +52,8 @@ class LangchainModelLoader:
 
     def list_available_models(self) -> list[str]:
         return list(self.models.keys())
+
+    def get_chat_model(self, tier: str = "basic", **kwargs: Any) -> Any:
+        if tier == "reasoning":
+            return self.init_model_openai_reasoning(**kwargs)
+        return self.init_model_openai_basic(**kwargs)

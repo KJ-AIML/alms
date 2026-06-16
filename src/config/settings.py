@@ -11,10 +11,16 @@ class Settings(BaseSettings):
     # Application identity
     APP_NAME: str = "ALMS"
     APP_DESCRIPTION: str = "Backend API for ALMS"
-    APP_VERSION: str = "0.2.1"
+    APP_VERSION: str = "0.3.0"
     SERVICE_NAME: str = "alms"
 
-    # OpenAI settings
+    # Feature flags — set to False to disable optional dependencies
+    AI_ENABLED: bool = False
+    DATABASE_ENABLED: bool = True
+    REDIS_ENABLED: bool = False
+
+    # AI provider settings
+    MODEL_PROVIDER: str = "openai"
     OPENAI_API_KEY: str | None = None
     OPENAI_MODEL_BASIC: str | None = None
     OPENAI_MODEL_REASONING: str | None = None
@@ -83,6 +89,31 @@ class Settings(BaseSettings):
             f"@{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_NAME}"
         )
 
+    def validate_production_settings(self) -> None:
+        """Raise ValueError if unsafe defaults are present in production mode."""
+        if self.DEBUG:
+            return
+        errors = []
+        if self.SECRET_KEY == "your-default-secret-key":
+            errors.append(
+                "SECRET_KEY must not be the default placeholder in production"
+            )
+        if "*" in self.ALLOWED_HOSTS:
+            errors.append("ALLOWED_HOSTS must not contain '*' in production")
+        if (
+            self.AI_ENABLED
+            and self.MODEL_PROVIDER == "openai"
+            and not self.OPENAI_API_KEY
+        ):
+            errors.append(
+                "OPENAI_API_KEY is required when AI_ENABLED=True and MODEL_PROVIDER=openai"
+            )
+        if errors:
+            raise ValueError(
+                "Production configuration errors:\n"
+                + "\n".join(f"  - {e}" for e in errors)
+            )
+
     class Config:
         env_file = BASE_DIR / ".env"
         case_sensitive = True
@@ -90,7 +121,7 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Post-initialization validation
-if not settings.DEBUG and not settings.OPENAI_API_KEY:
+# Post-initialization: warn if AI is enabled without a key in production
+if not settings.DEBUG and settings.AI_ENABLED and not settings.OPENAI_API_KEY:
     logger = logging.getLogger(__name__)
-    logger.warning("OPENAI_API_KEY is not set in production mode!")
+    logger.warning("AI_ENABLED=True but OPENAI_API_KEY is not set in production mode!")
