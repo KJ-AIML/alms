@@ -133,7 +133,7 @@ Usecase → Database       # Use repository pattern
 ## Project Structure
 
 ```
-fastapi-agentic-starter/
+alms/
 ├── src/
 │   ├── api/                      # API Layer
 │   │   ├── endpoints/v1/         # Versioned endpoints
@@ -174,6 +174,8 @@ fastapi-agentic-starter/
 │   │           └── build.py
 │   ├── providers/                # Infrastructure Providers
 │   │   └── ai/
+│   │       ├── base.py           # AIModelProvider abstract base
+│   │       ├── factory.py        # get_ai_provider() factory
 │   │       └── langchain_model_loader.py
 │   ├── observability/            # Observability Layer
 │   │   ├── __init__.py           # Module exports
@@ -235,14 +237,14 @@ fastapi-agentic-starter/
 ### 1. Clone & Setup
 
 ```bash
-git clone https://github.com/KJ-AIML/fastapi-agentic-starter.git
-cd fastapi-agentic-starter
+git clone https://github.com/KJ-AIML/alms.git
+cd alms
 
 # Copy environment file
 cp .env.example .env
 
 # Edit .env with your credentials
-# Required: OPENAI_API_KEY
+# Required only when AI_ENABLED=True: OPENAI_API_KEY
 # Optional: DATABASE_URL, REDIS_URL, OTLP_ENDPOINT
 ```
 
@@ -450,6 +452,14 @@ Configuration is managed via Pydantic Settings with environment variables:
 
 ```python
 # .env file
+
+# Feature flags — enable only what your project needs
+AI_ENABLED=False          # Set True when using AI agents or LangGraph workflows
+DATABASE_ENABLED=True     # Set False to disable DB dependency and readiness check
+REDIS_ENABLED=False       # Set True when Redis is in use
+MODEL_PROVIDER=openai     # AI provider selection (Google/Anthropic support is deferred)
+
+# AI keys — required only when AI_ENABLED=True
 OPENAI_API_KEY=sk-...
 OPENAI_MODEL_BASIC=gpt-4o-mini
 OPENAI_MODEL_REASONING=gpt-4o
@@ -471,6 +481,22 @@ TRACING_ENABLED=true
 DEBUG=true
 LOG_LEVEL=info
 SERVER_PORT=3000
+```
+
+### Production Configuration
+
+When `DEBUG=False`, ALMS calls `settings.validate_production_settings()` at lifespan startup and refuses to start if unsafe defaults are present:
+
+- `SECRET_KEY` must not be the default placeholder value
+- `ALLOWED_HOSTS` must not contain `*`
+- `OPENAI_API_KEY` must be set when `AI_ENABLED=True` and `MODEL_PROVIDER=openai`
+
+Set these in your production environment:
+
+```env
+DEBUG=False
+SECRET_KEY=<generated-secure-key>
+ALLOWED_HOSTS=["your-domain.com"]
 ```
 
 Access settings anywhere:
@@ -567,21 +593,22 @@ class PromptManager:
 
 ```python
 # src/agents/agent_manager/my_agent.py
-from langchain_openai import ChatOpenAI
-from src.config.settings import settings
 from src.agents.prompts.prompt_manager import prompt_manager
+from src.providers.ai.factory import get_ai_provider
 
-llm = ChatOpenAI(
-    model=settings.OPENAI_MODEL_BASIC,
-    api_key=settings.OPENAI_API_KEY
-)
 
 class MyAgent:
     def __init__(self):
-        self.llm = llm
-    
+        self._model = None
+
+    @property
+    def model(self):
+        if self._model is None:
+            self._model = get_ai_provider().get_chat_model("basic")
+        return self._model
+
     async def process(self, query: str) -> str:
-        response = await self.llm.ainvoke(
+        response = await self.model.ainvoke(
             [
                 ("system", prompt_manager.my_agent),
                 ("user", query),

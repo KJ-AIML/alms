@@ -1,7 +1,7 @@
 # Design Patterns
 
-> **Last Updated:** March 20, 2026  
-> **Version:** 0.1.0  
+> **Last Updated:** June 16, 2026  
+> **Version:** 0.3.0  
 > **Status:** ✅ Active
 
 ## Table of Contents

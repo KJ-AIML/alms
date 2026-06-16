@@ -1,7 +1,7 @@
 # 07 - Setup & Installation
 
-> **Last Updated:** March 20, 2026  
-> **Version:** 0.1.0  
+> **Last Updated:** June 16, 2026  
+> **Version:** 0.3.0  
 > **Status:** ✅ Active
 
 ## Prerequisites
@@ -101,7 +101,16 @@ The API will be available at:
 
 ## Environment Variables
 
-### Required
+### Feature Flags
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AI_ENABLED` | Enable AI agents and LangGraph workflows | `False` |
+| `DATABASE_ENABLED` | Enable database connection and readiness check | `True` |
+| `REDIS_ENABLED` | Enable Redis dependency | `False` |
+| `MODEL_PROVIDER` | AI provider selection (`openai`; Google/Anthropic deferred) | `openai` |
+
+### AI (Required only when `AI_ENABLED=True`)
 
 | Variable | Description | Example |
 |----------|-------------|---------|
@@ -143,6 +152,8 @@ The API will be available at:
 | `X_API_KEY` | API key for endpoints | `your-api-key-here` |
 | `ALLOWED_HOSTS` | CORS allowed hosts | `*` |
 
+> **Production fail-fast:** When `DEBUG=False`, ALMS calls `validate_production_settings()` at startup and refuses to start if `SECRET_KEY` is still the default placeholder or `ALLOWED_HOSTS` contains `*`. Change both before deploying.
+
 ### Cache (Optional)
 
 | Variable | Description | Default |
@@ -156,7 +167,13 @@ The API will be available at:
 ### Example .env file
 
 ```bash
-# Required
+# Feature flags
+AI_ENABLED=False
+DATABASE_ENABLED=True
+REDIS_ENABLED=False
+MODEL_PROVIDER=openai
+
+# AI keys — required only when AI_ENABLED=True
 OPENAI_API_KEY=sk-your-openai-key-here
 
 # AI Models

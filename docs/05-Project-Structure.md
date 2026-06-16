@@ -1,7 +1,7 @@
 # 05 - Project Structure
 
-> **Last Updated:** March 20, 2026  
-> **Version:** 0.2.1  
+> **Last Updated:** June 16, 2026  
+> **Version:** 0.3.0  
 > **Status:** ✅ Active
 
 ```
@@ -81,6 +81,8 @@ alms/
     │           └── build.py
     ├── providers/                      # Infrastructure Providers
     │   ├── ai/                         # AI model providers
+    │   │   ├── base.py                 # AIModelProvider abstract base
+    │   │   ├── factory.py              # get_ai_provider() factory
     │   │   └── langchain_model_loader.py
     │   ├── cache/                      # Cache providers (Redis)
     │   └── vectordb/                   # Vector database providers
@@ -102,9 +104,19 @@ alms/
     ├── scripts/                        # Utility scripts (empty)
     └── tests/                          # Automated tests
         ├── conftest.py                 # pytest configuration
-        └── v1/                         # Versioned tests
-            ├── test_health.py          # Health endpoint tests
-            └── test_agent.py           # Agent endpoint tests
+        ├── v1/                         # Versioned tests
+        │   ├── test_health.py          # Health endpoint tests
+        │   ├── test_agent.py           # Agent endpoint tests
+        │   ├── test_metrics.py         # Metrics tests
+        │   ├── test_metrics_endpoint.py
+        │   ├── test_observability_middleware.py
+        │   ├── test_sqlalchemy_repository.py
+        │   ├── test_settings.py        # Settings validation tests
+        │   └── test_tracing.py
+        ├── integration/
+        │   └── test_full_stack.py
+        └── e2e/
+            └── test_workflows.py
 ```
 
 ## Directory Responsibilities
@@ -413,4 +425,4 @@ Infrastructure (Providers, Database, Core)
    - Clear naming
    - Comprehensive documentation
 
-**Updated:** v0.2.1 - Added agent prompt manager, schemas, and sample workflow skeleton
+**Updated:** v0.3.0 - Added feature flags, provider abstraction (base.py, factory.py), production validation, updated test listing
