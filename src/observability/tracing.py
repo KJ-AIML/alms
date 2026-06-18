@@ -1,19 +1,7 @@
-"""
-OpenTelemetry tracing configuration for distributed tracing.
+"""OpenTelemetry tracing configuration for distributed tracing.
 
-This module provides automatic instrumentation for:
-- HTTP requests
-- Database queries
-- External service calls
-- Custom spans
-
-Usage:
-    from src.observability.tracing import tracer, trace_span
-
-    @trace_span("my_operation")
-    async def my_function():
-        with tracer.start_as_current_span("child_operation"):
-            pass
+Instrumentation imports for SQLAlchemy and Redis are guarded so that
+tracing can be set up even when those optional backends are not installed.
 """
 
 from contextlib import contextmanager
@@ -26,13 +14,28 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.sdk.resources import Resource, SERVICE_NAME, SERVICE_VERSION
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from opentelemetry.instrumentation.redis import RedisInstrumentor
 
 from src.config.settings import settings
 from src.config.logs_config import get_logger
 
 logger = get_logger(__name__)
+
+# -- Optional instrumentation (guarded so core-api profiles work) --
+
+_SQLAlchemyInstrumentor = None
+_RedisInstrumentor = None
+
+try:
+    from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+    _SQLAlchemyInstrumentor = SQLAlchemyInstrumentor
+except ImportError:
+    logger.debug("SQLAlchemy instrumentation not available")
+
+try:
+    from opentelemetry.instrumentation.redis import RedisInstrumentor
+    _RedisInstrumentor = RedisInstrumentor
+except ImportError:
+    logger.debug("Redis instrumentation not available")
 
 # Global tracer provider
 _tracer_provider: Optional[TracerProvider] = None
@@ -44,25 +47,13 @@ def setup_tracing(
     otlp_endpoint: Optional[str] = None,
     console_export: bool = False,
 ) -> TracerProvider:
-    """
-    Initialize OpenTelemetry tracing.
-
-    Args:
-        service_name: Name of the service
-        service_version: Version of the service
-        otlp_endpoint: OTLP collector endpoint (e.g., "http://localhost:4317")
-        console_export: Also export traces to console (for debugging)
-
-    Returns:
-        TracerProvider instance
-    """
+    """Initialize OpenTelemetry tracing."""
     global _tracer_provider
 
     if _tracer_provider is not None:
         logger.warning("Tracing already initialized")
         return _tracer_provider
 
-    # Create resource
     resource = Resource.create(
         {
             SERVICE_NAME: service_name,
@@ -73,27 +64,25 @@ def setup_tracing(
         }
     )
 
-    # Create tracer provider
     _tracer_provider = TracerProvider(resource=resource)
 
-    # Add OTLP exporter if endpoint provided
     if otlp_endpoint:
         otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
         _tracer_provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
         logger.info(f"OTLP tracing exporter configured: {otlp_endpoint}")
 
-    # Add console exporter for debugging
     if console_export or settings.DEBUG:
         console_exporter = ConsoleSpanExporter()
         _tracer_provider.add_span_processor(BatchSpanProcessor(console_exporter))
         logger.info("Console tracing exporter configured")
 
-    # Set global tracer provider
     trace.set_tracer_provider(_tracer_provider)
 
-    # Instrument libraries
-    SQLAlchemyInstrumentor().instrument()
-    RedisInstrumentor().instrument()
+    # Instrument optional libraries only when available
+    if _SQLAlchemyInstrumentor is not None:
+        _SQLAlchemyInstrumentor().instrument()
+    if _RedisInstrumentor is not None:
+        _RedisInstrumentor().instrument()
 
     logger.info(f"Tracing initialized for service: {service_name}")
     return _tracer_provider
@@ -116,13 +105,7 @@ tracer = get_tracer()
 
 @contextmanager
 def trace_span(name: str, attributes: Optional[dict] = None):
-    """
-    Context manager for creating a trace span.
-
-    Usage:
-        with trace_span("database_query", {"table": "users"}):
-            result = await db.execute(query)
-    """
+    """Context manager for creating a trace span."""
     with tracer.start_as_current_span(name) as span:
         if attributes:
             for key, value in attributes.items():
@@ -131,14 +114,7 @@ def trace_span(name: str, attributes: Optional[dict] = None):
 
 
 def trace_function(name: Optional[str] = None, attributes: Optional[dict] = None):
-    """
-    Decorator to trace function execution.
-
-    Usage:
-        @trace_function("process_payment")
-        async def process_payment(order_id: str):
-            pass
-    """
+    """Decorator to trace function execution."""
 
     def decorator(func: Callable) -> Callable:
         span_name = name or func.__name__
@@ -149,13 +125,10 @@ def trace_function(name: Optional[str] = None, attributes: Optional[dict] = None
                 if attributes:
                     for key, value in attributes.items():
                         span.set_attribute(key, value)
-
-                # Add function arguments as attributes
                 if args:
                     span.set_attribute("args.count", len(args))
                 if kwargs:
                     span.set_attribute("kwargs.keys", list(kwargs.keys()))
-
                 try:
                     result = await func(*args, **kwargs)
                     span.set_attribute("success", True)
@@ -173,7 +146,6 @@ def trace_function(name: Optional[str] = None, attributes: Optional[dict] = None
                 if attributes:
                     for key, value in attributes.items():
                         span.set_attribute(key, value)
-
                 try:
                     result = func(*args, **kwargs)
                     span.set_attribute("success", True)
@@ -183,9 +155,8 @@ def trace_function(name: Optional[str] = None, attributes: Optional[dict] = None
                     span.record_exception(e)
                     raise
 
+        import asyncio  # noqa: F811
+
         return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
     return decorator
-
-
-import asyncio  # noqa: E402

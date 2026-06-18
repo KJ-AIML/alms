@@ -4,7 +4,6 @@ from fastapi.responses import JSONResponse
 from src.api.endpoints.v1.schemas.base import AppResponse
 from src.config.logs_config import get_logger
 from src.config.settings import settings
-from src.database.connection import check_database_connection
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -31,11 +30,33 @@ async def live_check():
 
 @router.get("/ready", response_model=AppResponse[dict], status_code=status.HTTP_200_OK)
 async def ready_check():
-    """Readiness probe that verifies enabled dependencies."""
+    """Readiness probe that verifies enabled dependencies.
+
+    Database connection is only imported when DATABASE_ENABLED=True so that
+    core-api profiles without SQLAlchemy installed can still start.
+    """
     logger.debug("Readiness probe requested")
 
     if not settings.DATABASE_ENABLED:
         return AppResponse(success=True, data=_health_payload("ready", ready=True))
+
+    try:
+        from src.database.connection import check_database_connection
+    except ImportError:
+        logger.error(
+            "DATABASE_ENABLED=True but database dependencies are not installed"
+        )
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content=AppResponse(
+                success=False,
+                data=_health_payload(
+                    "degraded",
+                    ready=False,
+                    dependencies={"database": "dependencies not installed"},
+                ),
+            ).model_dump(),
+        )
 
     db_ready = await check_database_connection()
     payload = _health_payload(

@@ -16,14 +16,12 @@ def test_v1_live_health_check_without_auth(client_no_auth):
 
 
 def test_v1_ready_health_check_without_auth(client_no_auth, monkeypatch):
-    from src.api.endpoints.v1 import health
-
+    """Ready should report healthy when DB connection succeeds."""
     async def fake_check_database_connection():
         return True
 
     monkeypatch.setattr(
-        health,
-        "check_database_connection",
+        "src.database.connection.check_database_connection",
         fake_check_database_connection,
     )
 
@@ -37,14 +35,12 @@ def test_v1_ready_health_check_without_auth(client_no_auth, monkeypatch):
 
 
 def test_v1_ready_health_returns_503_when_database_fails(client_no_auth, monkeypatch):
-    from src.api.endpoints.v1 import health
-
+    """Ready should return 503 when DB connection fails."""
     async def fake_check_database_connection():
         return False
 
     monkeypatch.setattr(
-        health,
-        "check_database_connection",
+        "src.database.connection.check_database_connection",
         fake_check_database_connection,
     )
 

@@ -3,20 +3,28 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Add project root to path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import NullPool
 
 from src.api.main import app
 from src.config.settings import settings
-from src.database.connection import get_db, Base
+
+# --- Optional SQLAlchemy imports (guarded for core-api profiles) ---
+try:
+    from sqlalchemy.ext.asyncio import AsyncSession as _AsyncSessionType
+    _sqlalchemy_available = True
+except ImportError:  # pragma: no cover
+    _sqlalchemy_available = False
+    _AsyncSessionType = None  # type: ignore
+
+if _sqlalchemy_available:
+    from src.database.connection import get_db
+else:
+    get_db = None  # type: ignore
 
 
 # ============================================================================
@@ -26,33 +34,23 @@ from src.database.connection import get_db, Base
 
 @pytest.fixture
 def client():
-    """
-    Create a TestClient with API key header if configured.
-    Falls back to test-api-key if none configured.
-    """
-    # Use configured API key or default test key
     api_key = settings.X_API_KEY or "test-api-key"
     headers = {"X-API-Key": api_key}
-
     with TestClient(app, headers=headers) as c:
         yield c
 
 
 @pytest.fixture
 def client_no_auth():
-    """
-    Create a TestClient without authentication headers.
-    """
     with TestClient(app) as c:
         yield c
 
 
 @pytest.fixture
 def mock_session():
-    """
-    Create a mock async session for unit tests.
-    """
-    session = AsyncMock(spec=AsyncSession)
+    session = AsyncMock()
+    if _sqlalchemy_available and _AsyncSessionType is not None:
+        session = AsyncMock(spec=_AsyncSessionType)
     session.execute = AsyncMock()
     session.commit = AsyncMock()
     session.rollback = AsyncMock()
@@ -65,9 +63,6 @@ def mock_session():
 
 @pytest.fixture
 def mock_metrics():
-    """
-    Mock metrics collection for testing.
-    """
     metrics_mock = Mock()
     metrics_mock.inc = Mock()
     metrics_mock.observe = Mock()
@@ -77,9 +72,6 @@ def mock_metrics():
 
 @pytest.fixture
 def mock_tracer():
-    """
-    Mock tracer for testing.
-    """
     tracer_mock = Mock()
     span_mock = Mock()
     span_mock.__enter__ = Mock(return_value=span_mock)
@@ -97,22 +89,17 @@ def mock_tracer():
 
 @pytest_asyncio.fixture(scope="function")
 async def async_session():
-    """
-    Create a real async database session for integration tests.
-    Uses actual database connection.
-    """
-    from src.database.connection import AsyncSessionLocal
-
-    async with AsyncSessionLocal() as session:
+    if not _sqlalchemy_available:
+        pytest.skip("SQLAlchemy not installed")
+    from src.database.connection import _get_session_local
+    _Local = _get_session_local()
+    async with _Local() as session:
         yield session
         await session.rollback()
 
 
 @pytest_asyncio.fixture(scope="function")
 async def db_session_with_cleanup(async_session):
-    """
-    Database session that cleans up after test.
-    """
     try:
         yield async_session
     finally:
@@ -122,22 +109,13 @@ async def db_session_with_cleanup(async_session):
 
 @pytest.fixture
 def override_get_db(mock_session):
-    """
-    Override the get_db dependency with a mock session.
-    """
-
     async def _override_get_db():
         yield mock_session
-
     return _override_get_db
 
 
 @pytest.fixture(autouse=True)
 def setup_teardown():
-    """
-    Global setup and teardown for each test.
-    Clears dependency overrides after each test.
-    """
     yield
     app.dependency_overrides.clear()
 
@@ -149,10 +127,6 @@ def setup_teardown():
 
 @pytest.fixture(scope="session")
 def event_loop():
-    """
-    Create an instance of the default event loop for the test session.
-    Required for async tests.
-    """
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
@@ -165,9 +139,6 @@ def event_loop():
 
 @pytest.fixture
 def sample_user_data():
-    """
-    Sample user data for testing.
-    """
     return {
         "id": 1,
         "username": "testuser",
@@ -178,17 +149,11 @@ def sample_user_data():
 
 @pytest.fixture
 def sample_agent_query():
-    """
-    Sample agent query for testing.
-    """
     return {"query": "What is the weather today?", "context": None, "stream": False}
 
 
 @pytest.fixture
 def sample_api_response():
-    """
-    Sample standardized API response.
-    """
     return {
         "success": True,
         "data": {"message": "Success"},
@@ -199,9 +164,6 @@ def sample_api_response():
 
 @pytest.fixture
 def sample_error_response():
-    """
-    Sample error API response.
-    """
     return {
         "success": False,
         "data": None,
@@ -217,9 +179,6 @@ def sample_error_response():
 
 @pytest.fixture
 def mock_prometheus_registry():
-    """
-    Mock Prometheus registry for testing.
-    """
     registry_mock = Mock()
     registry_mock.collect = Mock(return_value=[])
     return registry_mock
@@ -227,9 +186,6 @@ def mock_prometheus_registry():
 
 @pytest.fixture
 def mock_trace_provider():
-    """
-    Mock OpenTelemetry trace provider.
-    """
     provider_mock = Mock()
     provider_mock.get_tracer = Mock(return_value=Mock())
     return provider_mock
@@ -237,9 +193,6 @@ def mock_trace_provider():
 
 @pytest.fixture
 def sample_metrics_output():
-    """
-    Sample Prometheus metrics output.
-    """
     return b"""# HELP http_requests_total Total HTTP requests
 # TYPE http_requests_total counter
 http_requests_total{method="GET",endpoint="/api/v1/health",status_code="200"} 10
@@ -258,9 +211,6 @@ http_request_duration_seconds_bucket{le="+Inf"} 10
 
 @pytest.fixture
 def mock_request():
-    """
-    Mock HTTP request.
-    """
     request = Mock()
     request.url.path = "/api/v1/test"
     request.method = "GET"
@@ -272,9 +222,6 @@ def mock_request():
 
 @pytest.fixture
 def mock_response():
-    """
-    Mock HTTP response.
-    """
     response = Mock()
     response.status_code = 200
     response.headers = {}
@@ -289,15 +236,10 @@ def mock_response():
 
 @pytest.fixture
 def mock_model_class():
-    """
-    Mock SQLAlchemy model class.
-    """
-
     class MockModel:
         __tablename__ = "test_items"
         id = 1
         name = "Test"
-
     return MockModel
 
 
@@ -308,23 +250,16 @@ def mock_model_class():
 
 @pytest.fixture
 def client_with_auth():
-    """
-    Test client with authentication headers.
-    """
     headers = {
         "X-API-Key": settings.X_API_KEY or "test-api-key",
         "Content-Type": "application/json",
     }
-
     with TestClient(app, headers=headers) as c:
         yield c
 
 
 @pytest.fixture
 def client_without_auth():
-    """
-    Test client without authentication headers.
-    """
     with TestClient(app) as c:
         yield c
 
@@ -336,15 +271,12 @@ def client_without_auth():
 
 @pytest.fixture
 def benchmark_config():
-    """
-    Configuration for benchmark tests.
-    """
     return {
         "warmup_requests": 10,
         "benchmark_requests": 100,
         "concurrent_workers": 5,
-        "max_p99_latency": 0.1,  # 100ms
-        "min_success_rate": 0.95,  # 95%
+        "max_p99_latency": 0.1,
+        "min_success_rate": 0.95,
     }
 
 
@@ -355,13 +287,8 @@ def benchmark_config():
 
 @pytest.fixture
 def async_runner():
-    """
-    Helper to run async functions in sync context.
-    """
-
     def run_async(coro):
         return asyncio.get_event_loop().run_until_complete(coro)
-
     return run_async
 
 
@@ -372,13 +299,8 @@ def async_runner():
 
 @pytest.fixture(autouse=True)
 def cleanup_requests():
-    """
-    Clean up any pending requests after each test.
-    """
     yield
-    # Force garbage collection
     import gc
-
     gc.collect()
 
 
@@ -388,9 +310,6 @@ def cleanup_requests():
 
 
 def pytest_configure(config):
-    """
-    Configure custom test markers.
-    """
     config.addinivalue_line("markers", "integration: mark test as integration test")
     config.addinivalue_line("markers", "e2e: mark test as end-to-end test")
     config.addinivalue_line("markers", "performance: mark test as performance test")
@@ -406,14 +325,7 @@ def pytest_configure(config):
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment():
-    """
-    Setup test environment once per session.
-    """
-    # Set test mode
     original_debug = settings.DEBUG
     settings.DEBUG = True
-
     yield
-
-    # Restore original settings
     settings.DEBUG = original_debug
