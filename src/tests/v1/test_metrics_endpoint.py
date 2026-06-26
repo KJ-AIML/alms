@@ -7,6 +7,7 @@ These tests verify the /api/v1/metrics endpoint is accessible and returns data.
 import pytest
 
 
+pytest.importorskip("prometheus_client")
 class TestMetricsEndpoint:
     """Test suite for /api/v1/metrics endpoint."""
 

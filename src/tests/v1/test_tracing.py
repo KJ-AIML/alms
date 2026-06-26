@@ -7,6 +7,7 @@ Tests verify tracing infrastructure is properly set up.
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 
+pytest.importorskip("opentelemetry")
 
 class TestTracingSetup:
     """Test suite for tracing initialization."""

@@ -7,6 +7,7 @@ Tests verify metrics infrastructure is properly set up.
 import pytest
 
 
+pytest.importorskip("prometheus_client")
 class TestMetricsSetup:
     """Test suite for metrics initialization."""
 
