@@ -6,6 +6,7 @@ These tests use mocked sessions to avoid database dependencies.
 
 import pytest
 from unittest.mock import AsyncMock, Mock, MagicMock
+sqlalchemy = pytest.importorskip("sqlalchemy")
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import declarative_base
