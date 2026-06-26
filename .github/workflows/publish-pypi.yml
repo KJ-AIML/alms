@@ -1,0 +1,53 @@
+name: Publish to PyPI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install twine
+        run: uv pip install --system twine
+
+      - name: Build root package
+        run: uv build
+
+      - name: Build CLI package
+        working-directory: cli
+        run: uv build
+
+      - name: Verify artifacts
+        run: |
+          ls -la dist/
+          ls -la cli/dist/
+          test -f dist/axtra_alms-0.3.0-py3-none-any.whl
+          test -f dist/axtra_alms-0.3.0.tar.gz
+          test -f cli/dist/alms_cli-0.1.6-py3-none-any.whl
+          test -f cli/dist/alms_cli-0.1.6.tar.gz
+
+      - name: Twine check
+        run: |
+          twine check dist/*
+          twine check cli/dist/*
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          twine upload dist/*
+          twine upload cli/dist/*
