@@ -40,6 +40,8 @@ Verify these routes for all profiles:
 
 ### Version Sync
 
+- [ ] PyPI distribution name for ALMS root is `axtra-alms` while import/module names remain unchanged
+- [ ] CLI distribution name is `alms-cli`; CLI command remains `alms`
 - [ ] alms root: `pyproject.toml` version matches `settings.APP_VERSION`
 - [ ] alms root: `.env.example` APP_VERSION matches
 - [ ] alms/cli: `pyproject.toml` version matches `__init__.py` `__version__`
@@ -76,7 +78,7 @@ Verify these routes for all profiles:
 6. Commit changes
 7. Tag release: `git tag v<version>`
 8. Push tag: `git push origin v<version>`
-9. (Optional) Publish to PyPI: `uv build && twine upload dist/*`
+9. (Optional) Publish to PyPI after explicit approval: `uv build && twine upload dist/*` (artifact should be `axtra_alms-<version>-...`, not `alms-<version>-...`)
 
 ### ALMS CLI
 
@@ -87,7 +89,7 @@ Verify these routes for all profiles:
 5. Commit changes
 6. Tag release: `git tag cli-v<version>`
 7. Push tag: `git push origin cli-v<version>`
-8. (Optional) Publish to PyPI: `cd cli && uv build && twine upload dist/*`
+8. (Optional) Publish to PyPI after explicit approval: `cd cli && uv build && twine upload dist/*`
 
 ### ALMS LangGraph Agent Skill
 

@@ -4,6 +4,21 @@
 
 This is the first release candidate for ALMS (Agentic Layer for MicroServices), a production-ready AI-first backend framework.
 
+
+## PyPI Distribution Name Correction
+
+- The `alms` distribution name is unavailable on PyPI, so the root framework package is published as `axtra-alms==0.3.0`.
+- Python import/module names remain unchanged; only the installable distribution name changed.
+- The CLI distribution remains `alms-cli`; its command remains `alms`.
+- `alms-cli` is bumped to `0.1.6` because `0.1.5` already exists on PyPI and PyPI does not allow reusing uploaded project/version/file combinations.
+
+Install commands for the RC:
+
+```bash
+pip install axtra-alms
+pip install alms-cli==0.1.6
+```
+
 ## Major Improvements
 
 ### 1. CLI Template System Refactor (Phase 3A)
@@ -98,7 +113,7 @@ This is the first release candidate for ALMS (Agentic Layer for MicroServices), 
 - Route structure has changed (doubled-prefix bugs fixed) - update any hardcoded routes
 
 ### Migration Steps
-1. Update CLI: `pip install --upgrade alms-cli`
+1. Update CLI: `pip install --upgrade alms-cli==0.1.6`
 2. Regenerate project: `alms init my-project --profile full --no-interactive`
 3. Copy your custom code from old project to new project
 4. Update any hardcoded route paths
@@ -160,7 +175,7 @@ See `docs/release-checklist.md` for the full release checklist covering:
 - Pydantic 2.12.5+
 - Optional: LangChain, LangGraph, SQLAlchemy, OpenTelemetry, Prometheus
 
-### ALMS CLI 0.1.5
+### ALMS CLI 0.1.6
 - Python 3.13+
 - Jinja2 3.1.0+
 - Typer, Rich, Questionary for UI
@@ -184,7 +199,7 @@ This release represents the culmination of Phases 1-4 of the ALMS optimization p
 
 1. Tag release candidate: `git tag v0.3.0-rc1`
 2. Wait for CI validation
-3. (Deferred) Publish to PyPI after RC validation: `uv build && twine upload dist/*`
+3. (Deferred) Publish to PyPI after controlled upload approval: root package publishes as `axtra-alms==0.3.0`; CLI publishes as `alms-cli==0.1.6`.
 3. Create GitHub release with release notes
 4. Announce release
 5. Gather feedback

@@ -17,6 +17,12 @@ alms init my-project
 uvx --from alms-cli alms init my-project
 ```
 
+The reference framework package is published on PyPI as `axtra-alms` because the `alms` distribution name is unavailable. Internal imports and generated module names remain `src.*`; only the installable distribution name changed.
+
+```bash
+pip install axtra-alms
+```
+
 The CLI features:
 
 - Beautiful terminal UI with interactive prompts

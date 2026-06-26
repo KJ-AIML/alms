@@ -1,5 +1,5 @@
 [project]
-name = "alms"
+name = "axtra-alms"
 version = "0.3.0"
 description = "ALMS AI-first backend starter"
 readme = "README.md"
