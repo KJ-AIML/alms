@@ -1,0 +1,13 @@
+"""Sample dependency injection endpoint."""
+
+from fastapi import APIRouter, Depends
+from src.api.endpoints.v1.schemas.base import AppResponse
+from src.api.endpoints.v1.dependencies import get_db_session
+
+router = APIRouter()
+
+
+@router.get("/sample")
+async def sample_di(session=Depends(get_db_session)):
+    """Sample DI endpoint."""
+    return AppResponse(success=True, data={"message": "DI working"})

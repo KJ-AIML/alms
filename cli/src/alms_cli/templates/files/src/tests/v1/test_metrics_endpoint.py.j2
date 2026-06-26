@@ -1,0 +1,10 @@
+"""Metrics endpoint tests."""
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_metrics_endpoint(client):
+    """Test metrics endpoint."""
+    response = await client.get("/api/v1/metrics")
+    assert response.status_code == 200

@@ -1,0 +1,46 @@
+"""Observability middleware."""
+
+import logging
+import time
+import uuid
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+
+logger = logging.getLogger(__name__)
+
+
+class ObservabilityMiddleware(BaseHTTPMiddleware):
+    """Middleware to record metrics and traces for requests."""
+
+    async def dispatch(self, request: Request, call_next):
+        # Reuse request_id from request.state if already set by LoggingMiddleware
+        request_id = getattr(request.state, "request_id", None)
+        if not request_id:
+            request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+            request.state.request_id = request_id
+
+        start_time = time.time()
+
+        try:
+            response = await call_next(request)
+            process_time = time.time() - start_time
+
+            # Record metrics (if metrics module is available)
+            try:
+                from src.observability.metrics import DatabaseMetricsMiddleware
+                # Metrics recording would go here
+            except ImportError:
+                pass
+
+            logger.debug(
+                f"Observability: {request.method} {request.url.path} "
+                f"status={response.status_code} time={process_time:.4f}s"
+            )
+            return response
+        except Exception as exc:
+            process_time = time.time() - start_time
+            logger.error(
+                f"Observability error: {request.method} {request.url.path} "
+                f"error={exc} time={process_time:.4f}s"
+            )
+            raise

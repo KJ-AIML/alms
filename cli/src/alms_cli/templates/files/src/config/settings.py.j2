@@ -1,0 +1,56 @@
+"""Application settings."""
+
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+
+
+class Settings(BaseSettings):
+    APP_NAME: str = "ALMS Backend"
+    APP_DESCRIPTION: str = "ALMS AI-first backend application"
+    APP_VERSION: str = "0.1.0"
+    SERVICE_NAME: str = "alms"  # kept for observability compatibility
+    DEBUG: bool = True
+    SERVER_HOST: str = "0.0.0.0"
+    SERVER_PORT: int = 3000
+{% if has_ai %}    AI_ENABLED: bool = False
+{% endif %}{% if has_db %}    DATABASE_ENABLED: bool = True
+{% endif %}{% if has_redis %}    REDIS_ENABLED: bool = False
+{% endif %}{% if has_ai %}    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL_BASIC: str = "gpt-4o-mini"
+    OPENAI_MODEL_REASONING: str = "gpt-4o"
+{% endif %}{% if has_db %}    DATABASE_URL: str | None = None
+    DATABASE_HOST: str = "localhost"
+    DATABASE_PORT: int = 5432
+    DATABASE_NAME: str = "db"
+    DATABASE_USER: str = "postgres"
+    DATABASE_PASSWORD: str = "postgres"
+{% endif %}{% if has_redis %}    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+{% endif %}{% if has_obs %}    METRICS_ENABLED: bool = True
+    TRACING_ENABLED: bool = True
+    OTLP_ENDPOINT: str | None = None
+{% endif %}    LOG_LEVEL: str = "info"
+    SECRET_KEY: str = "your-default-secret-key"
+    ALLOWED_HOSTS: list[str] = ["*"]
+    X_API_KEY: str | None = None
+    API_PREFIX: str = "/api"
+
+    def validate_production_settings(self):
+        """Validate settings for production."""
+        if not self.DEBUG:
+            if self.SECRET_KEY == "your-default-secret-key":
+                raise ValueError("SECRET_KEY must be set in production")
+            if "*" in self.ALLOWED_HOSTS:
+                raise ValueError("ALLOWED_HOSTS must not contain * in production")
+
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()

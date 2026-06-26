@@ -1,0 +1,26 @@
+"""Prometheus metrics."""
+
+from prometheus_client import Counter, Histogram, generate_latest
+
+
+metrics_counter = Counter("http_requests_total", "Total HTTP requests", ["method", "endpoint", "status"])
+
+
+class MetricsCollector:
+    """Collect and expose metrics."""
+
+    def counter(self, name: str, labels: dict[str, str]):
+        """Increment a counter metric."""
+        pass
+
+    def generate(self) -> bytes:
+        """Generate metrics data."""
+        return generate_latest()
+
+
+metrics = MetricsCollector()
+
+
+def generate_metrics() -> bytes:
+    """Generate Prometheus metrics."""
+    return generate_latest()

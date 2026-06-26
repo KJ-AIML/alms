@@ -28,7 +28,6 @@ from prometheus_client import (
     Gauge,
     Info,
     CollectorRegistry,
-    generate_latest,
     CONTENT_TYPE_LATEST,
 )
 from prometheus_client.openmetrics.exposition import generate_latest

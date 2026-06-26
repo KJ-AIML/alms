@@ -1,0 +1,16 @@
+"""Sample usecase."""
+
+from typing import Any
+from src.execution.actions.sample_action import SampleAction
+
+
+class SampleUseCase:
+    """Sample usecase that orchestrates business flow."""
+
+    def __init__(self, action: SampleAction | None = None):
+        self.action = action or SampleAction()
+
+    async def execute(self, query: str) -> dict[str, Any]:
+        """Execute the usecase."""
+        result = await self.action.execute(query)
+        return {"usecase_result": result}

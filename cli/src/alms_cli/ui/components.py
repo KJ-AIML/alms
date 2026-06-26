@@ -3,7 +3,13 @@
 from rich.console import Console
 from rich.panel import Panel
 from rich.tree import Tree
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TimeElapsedColumn,
+)
 from rich.table import Table
 from rich import box
 from pathlib import Path
@@ -16,7 +22,7 @@ def print_header(title: str, subtitle: str = ""):
     content = f"[bold white]{title}[/bold white]"
     if subtitle:
         content += f"\n[dim]{subtitle}[/dim]"
-    
+
     console.print()
     console.print(
         Panel(
@@ -71,13 +77,13 @@ def print_tree(directory: Path, prefix: str = ""):
         f"[bold blue]{directory.name}[/bold blue]",
         guide_style="blue",
     )
-    
+
     def add_to_tree(path: Path, parent: Tree):
         items = sorted(path.iterdir(), key=lambda x: (not x.is_dir(), x.name))
         for item in items:
-            if item.name.startswith('.') or item.name == '__pycache__':
+            if item.name.startswith(".") or item.name == "__pycache__":
                 continue
-            
+
             if item.is_dir():
                 branch = parent.add(
                     f"[bold blue]{item.name}/[/bold blue]",
@@ -89,7 +95,7 @@ def print_tree(directory: Path, prefix: str = ""):
                     f"[dim]{item.name}[/dim]",
                     guide_style="dim",
                 )
-    
+
     add_to_tree(directory, tree)
     console.print(tree)
 
@@ -101,21 +107,21 @@ def print_project_summary(project_path: Path, files_created: int, features: list
         border_style="green",
         title="[bold green]Project Created Successfully![/bold green]",
     )
-    
+
     table.add_column("Property", style="bold blue")
     table.add_column("Value", style="white")
-    
+
     table.add_row("Name", project_path.name)
     table.add_row("Location", str(project_path))
     table.add_row("Files Created", str(files_created))
     table.add_row("Features", ", ".join(features))
-    
+
     console.print()
     console.print(table)
     console.print()
-    
+
     console.print("[bold]Next steps:[/bold]")
     console.print(f"  [dim]cd[/dim] [cyan]{project_path.name}[/cyan]")
-    console.print(f"  [dim]uv sync[/dim]")
-    console.print(f"  [dim]uv run -m src.api.main[/dim]")
+    console.print("  [dim]uv sync[/dim]")
+    console.print("  [dim]uv run -m src.api.main[/dim]")
     console.print()

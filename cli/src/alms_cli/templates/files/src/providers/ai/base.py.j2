@@ -1,0 +1,13 @@
+"""AI provider contracts."""
+
+from abc import ABC, abstractmethod
+from typing import Any
+
+
+class AIModelProvider(ABC):
+    """Base AI model provider."""
+
+    @abstractmethod
+    def get_chat_model(self, tier: str = "basic") -> Any:
+        """Return a chat model for the requested tier."""
+        raise NotImplementedError

@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     LOG_SAVE_TO_FILE: bool = False
     LOG_FILE: str = "src/logs/app.log"
     LOG_AUTO_SETUP: bool = True
+    LOG_MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
+    LOG_BACKUP_COUNT: int = 5
 
     # Server Configuration
     SERVER_PORT: int = 3000

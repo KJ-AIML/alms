@@ -1,0 +1,46 @@
+"""Health check endpoint."""
+
+from fastapi import APIRouter, status
+from src.api.endpoints.v1.schemas.base import AppResponse
+
+router = APIRouter()
+
+
+@router.get("/live", response_model=AppResponse[dict], status_code=status.HTTP_200_OK)
+async def live_check():
+    return AppResponse(success=True, data={"status": "alive", "ready": True})
+
+
+{% if not has_db %}@router.get("/ready", response_model=AppResponse[dict], status_code=status.HTTP_200_OK)
+async def ready_check():
+    return AppResponse(success=True, data={"status": "ready", "ready": True})
+
+
+@router.get("")
+async def health_check():
+    return await ready_check()
+{% else %}from src.config.settings import settings
+
+
+@router.get("/ready", response_model=AppResponse[dict], status_code=status.HTTP_200_OK)
+async def ready_check():
+    if not settings.DATABASE_ENABLED:
+        return AppResponse(success=True, data={"status": "ready", "ready": True})
+    try:
+        from src.database.connection import check_database_connection
+    except ImportError:
+        return AppResponse(success=False, data={"status": "degraded", "ready": False})
+    db_ready = await check_database_connection()
+    if db_ready:
+        return AppResponse(success=True, data={"status": "ready", "ready": True, "dependencies": {"database": "healthy"}})
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content=AppResponse(success=False, data={"status": "degraded", "ready": False, "dependencies": {"database": "unhealthy"}}).model_dump(),
+    )
+
+
+@router.get("")
+async def health_check():
+    return await ready_check()
+{% endif %}

@@ -1,0 +1,56 @@
+"""Logging middleware."""
+
+import logging
+import time
+import uuid
+from contextvars import ContextVar
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+
+logger = logging.getLogger(__name__)
+request_id_ctx: ContextVar[str] = ContextVar("request_id", default="")
+
+
+class RequestIDFilter(logging.Filter):
+    """Logging filter to inject request_id into log records."""
+
+    def filter(self, record):
+        record.request_id = request_id_ctx.get()
+        return True
+
+
+class LoggingMiddleware(BaseHTTPMiddleware):
+    """Middleware to log requests and manage request_id."""
+
+    async def dispatch(self, request: Request, call_next):
+        # Generate or extract request_id
+        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        request.state.request_id = request_id
+        request_id_ctx.set(request_id)
+
+        # Log request
+        start_time = time.time()
+        logger.info(f"Request started: {request.method} {request.url.path}")
+
+        try:
+            response = await call_next(request)
+            process_time = time.time() - start_time
+
+            # Add request_id and process_time to response headers
+            response.headers["X-Request-ID"] = request_id
+            response.headers["X-Process-Time"] = str(process_time)
+
+            logger.info(
+                f"Request completed: {request.method} {request.url.path} "
+                f"status={response.status_code} time={process_time:.4f}s"
+            )
+            return response
+        except Exception as exc:
+            process_time = time.time() - start_time
+            logger.error(
+                f"Request failed: {request.method} {request.url.path} "
+                f"error={exc} time={process_time:.4f}s"
+            )
+            raise
+        finally:
+            request_id_ctx.set("")

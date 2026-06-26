@@ -1,0 +1,15 @@
+"""OpenTelemetry tracing."""
+
+from contextlib import contextmanager
+
+
+class Tracer:
+    """Simple tracer for distributed tracing."""
+
+    @contextmanager
+    def start_as_current_span(self, name: str):
+        """Start a new span."""
+        yield
+
+
+tracer = Tracer()

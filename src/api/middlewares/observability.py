@@ -56,8 +56,12 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
         ):
             return await call_next(request)
 
-        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
-        request.state.request_id = request_id
+        # Reuse request_id set by LoggingMiddleware (single source of truth).
+        # Only generate a new one if no middleware upstream has set it yet.
+        request_id = getattr(request.state, "request_id", None)
+        if not request_id:
+            request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+            request.state.request_id = request_id
         start_time = time.time()
         method = request.method
         endpoint = self._get_endpoint_name(request)

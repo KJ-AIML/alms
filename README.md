@@ -18,6 +18,7 @@ uvx --from alms-cli alms init my-project
 ```
 
 The CLI features:
+
 - Beautiful terminal UI with interactive prompts
 - Feature selection (Database, Redis, AI Agents, Observability, Docker, CI/CD)
 - Complete project scaffolding ready to run
@@ -365,6 +366,7 @@ ruff format src/
 All API responses use the standardized `AppResponse` wrapper:
 
 **Success Response:**
+
 ```json
 {
   "success": true,
@@ -378,6 +380,7 @@ All API responses use the standardized `AppResponse` wrapper:
 ```
 
 **Error Response:**
+
 ```json
 {
   "success": false,
@@ -509,6 +512,73 @@ api_key = settings.OPENAI_API_KEY
 db_url = settings.DATABASE_URL
 ```
 
+## Optional Extras
+
+ALMS uses optional dependency extras so you only install what you need:
+
+```bash
+# Install with AI/LLM support
+uv sync --extra ai
+
+# Install with database support
+uv sync --extra db
+
+# Install with observability support
+uv sync --extra observability
+
+# Install with all features
+uv sync --extra full
+```
+
+Available extras:
+
+| Extra | Purpose |
+|-------|---------|
+| `ai` | LangChain, LangGraph, OpenAI |
+| `db` | SQLAlchemy, asyncpg, Alembic |
+| `cache` | Redis |
+| `observability` | OpenTelemetry, Prometheus |
+| `docs` | Scalar API docs |
+| `full` | All of the above |
+
+## Project Metadata ([tool.alms])
+
+ALMS projects declare their active profile and capabilities in `pyproject.toml`:
+
+```toml
+[tool.alms]
+profile = "full"
+capabilities = ["runtime_auth", "tests", "llm", "langgraph", "database", "redis", "observability", "scalar_docs", "docker", "ci"]
+```
+
+The ALMS CLI reads this metadata to generate projects with only the enabled capabilities. The companion skill also reads `[tool.alms]` to constrain code generation.
+
+## Generated Project Routes
+
+When you generate a project with the ALMS CLI, the route structure is:
+
+```
+/api/v1/health/live      # Liveness check
+/api/v1/health/ready     # Readiness check (includes DB if enabled)
+/api/v1/health           # Alias for ready
+/api/v1/metrics          # Prometheus metrics (if observability enabled)
+/api/v1/agent/sample     # Sample agent endpoint (if llm enabled)
+/api/v1/di/sample        # Sample DI endpoint (if llm enabled)
+```
+
+The three-level router pattern is:
+
+```python
+v1_router = APIRouter()  # No prefix
+v1_router.include_router(health.router, prefix="/health")
+v1_router.include_router(metrics.router, prefix="/metrics")
+
+api_router = APIRouter()
+api_router.include_router(v1_router, prefix="/v1")
+
+app.include_router(api_router, prefix=settings.API_PREFIX)  # /api
+```
+
 ## Observability
 
 ALMS includes built-in observability with OpenTelemetry and Prometheus:
@@ -575,7 +645,7 @@ Endpoint -> UseCase -> Action -> Agent or Workflow
 You are a helpful assistant for this feature.
 ```
 
-2. **Register the prompt** in `src/agents/prompts/prompt_manager.py`:
+1. **Register the prompt** in `src/agents/prompts/prompt_manager.py`:
 
 ```python
 class PromptManager:
@@ -589,7 +659,7 @@ class PromptManager:
         return self._my_agent
 ```
 
-3. **Define the agent** in `src/agents/agent_manager/`:
+1. **Define the agent** in `src/agents/agent_manager/`:
 
 ```python
 # src/agents/agent_manager/my_agent.py
@@ -617,7 +687,7 @@ class MyAgent:
         return response.content
 ```
 
-4. **Create an action** in `src/execution/actions/`:
+1. **Create an action** in `src/execution/actions/`:
 
 ```python
 # src/execution/actions/process_my_agent_action.py
@@ -632,7 +702,7 @@ class ProcessMyAgentAction:
         return {"response": result}
 ```
 
-5. **Create use case** in `src/execution/usecases/`:
+1. **Create use case** in `src/execution/usecases/`:
 
 ```python
 # src/execution/usecases/process_my_agent_usecase.py
@@ -646,7 +716,7 @@ class ProcessMyAgentUseCase:
         return await self.action.execute(query)
 ```
 
-6. **Create endpoint** in `src/api/endpoints/v1/`:
+1. **Create endpoint** in `src/api/endpoints/v1/`:
 
 ```python
 # src/api/endpoints/v1/my_endpoint.py
@@ -663,7 +733,7 @@ async def my_agent_endpoint(query: str):
     return AppResponse(success=True, data=result)
 ```
 
-7. **Register router** in `src/api/endpoints/v1/routers.py`:
+1. **Register router** in `src/api/endpoints/v1/routers.py`:
 
 ```python
 from src.api.endpoints.v1 import my_endpoint

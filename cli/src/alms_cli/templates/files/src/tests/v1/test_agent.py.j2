@@ -1,0 +1,10 @@
+"""Agent endpoint tests."""
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_sample_agent(client):
+    """Test sample agent endpoint."""
+    response = await client.post("/api/v1/agent/sample", json={"query": "test"})
+    assert response.status_code == 200

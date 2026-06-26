@@ -1,0 +1,22 @@
+"""Agent definitions."""
+
+from functools import lru_cache
+from src.providers.ai.factory import get_ai_provider
+
+
+class SampleAgent:
+    """Sample AI agent."""
+
+    def __init__(self):
+        self.llm = get_ai_provider().get_chat_model(tier="basic")
+
+    async def process(self, query: str) -> str:
+        """Process a query using the agent."""
+        response = await self.llm.ainvoke(query)
+        return response.content
+
+
+@lru_cache
+def create_sample_agent() -> SampleAgent:
+    """Create a cached sample agent."""
+    return SampleAgent()

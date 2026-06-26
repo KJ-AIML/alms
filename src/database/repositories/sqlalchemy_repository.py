@@ -172,8 +172,11 @@ class SQLAlchemyRepository(BaseRepository[T], Generic[T]):
             {"table": self._table_name, "operation": "count"},
         ):
             start_time = __import__("time").time()
-            result = await self.session.execute(select(self.model))
-            count = len(result.scalars().all())
+            from sqlalchemy import func
+            result = await self.session.execute(
+                select(func.count()).select_from(self.model)
+            )
+            count = result.scalar()
             duration = __import__("time").time() - start_time
             DatabaseMetricsMiddleware.record_query("count", self._table_name, duration)
             return count

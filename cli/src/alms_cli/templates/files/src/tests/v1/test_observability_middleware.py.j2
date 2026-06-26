@@ -1,0 +1,10 @@
+"""Observability middleware tests."""
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_observability_middleware(client):
+    """Test observability middleware."""
+    response = await client.get("/api/v1/health")
+    assert response.status_code == 200

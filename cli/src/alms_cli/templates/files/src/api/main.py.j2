@@ -1,0 +1,79 @@
+"""FastAPI application entry point."""
+
+from contextlib import asynccontextmanager
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from src.config.settings import settings
+from src.api.router.routers import api_router
+from src.api.middlewares.error_handler import ErrorHandlerMiddleware
+from src.api.middlewares.security import APIKeyMiddleware, SecurityHeadersMiddleware
+from src.api.middlewares.logging import LoggingMiddleware
+{% if has_obs %}from src.api.middlewares.observability import ObservabilityMiddleware
+{% endif %}
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    settings.validate_production_settings()
+{% if has_obs %}    try:
+        from src.observability import setup_metrics, setup_tracing, instrument_fastapi
+        if settings.METRICS_ENABLED:
+            setup_metrics(service_name=settings.SERVICE_NAME, service_version=settings.APP_VERSION)
+        if settings.TRACING_ENABLED:
+            setup_tracing(service_name=settings.SERVICE_NAME, service_version=settings.APP_VERSION)
+            instrument_fastapi(app)
+    except ImportError:
+        pass
+{% endif %}    yield
+
+
+def create_app() -> FastAPI:
+    """Create and configure FastAPI application."""
+    app = FastAPI(
+        title=settings.APP_NAME,
+        description=settings.APP_DESCRIPTION,
+        version=settings.APP_VERSION,
+        lifespan=lifespan,
+        docs_url=None,
+        redoc_url=None,
+    )
+
+    # Middleware registration order matters - added in reverse execution order
+    # LoggingMiddleware executes first on incoming requests
+    app.add_middleware(LoggingMiddleware)
+{% if has_obs %}    app.add_middleware(ObservabilityMiddleware)
+{% endif %}    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(APIKeyMiddleware)
+    app.add_middleware(ErrorHandlerMiddleware)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    app.include_router(api_router, prefix=settings.API_PREFIX)
+    return app
+
+
+app = create_app()
+
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "src.api.main:app",
+        host=settings.SERVER_HOST,
+        port=settings.SERVER_PORT,
+        reload=settings.DEBUG,
+    )
+{% if has_scalar %}
+
+    try:
+        from scalar_fastapi import get_scalar_api_reference
+        @app.get("/docs", include_in_schema=False)
+        async def scalar_html():
+            return get_scalar_api_reference(openapi_url=app.openapi_url, title=app.title)
+    except ImportError:
+        pass
+{% endif %}

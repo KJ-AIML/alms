@@ -1,0 +1,10 @@
+"""Full stack integration tests."""
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_full_stack(client):
+    """Test full stack integration."""
+    response = await client.get("/api/v1/health")
+    assert response.status_code == 200

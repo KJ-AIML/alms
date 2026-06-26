@@ -1,0 +1,27 @@
+"""Pytest configuration and fixtures."""
+
+import pytest
+from httpx import AsyncClient
+from src.api.main import app
+{% if has_db %}try:
+    from src.database.connection import get_db
+except ImportError:
+    get_db = None  # type: ignore
+{% endif %}
+
+@pytest.fixture
+async def client():
+    """Create test client."""
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        yield client
+{% if has_db %}
+
+@pytest.fixture
+def mock_session():
+    from unittest.mock import AsyncMock
+    session = AsyncMock()
+    session.execute = AsyncMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    return session
+{% endif %}

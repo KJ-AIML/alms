@@ -1,0 +1,14 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+RUN pip install uv
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev{{ extra_flag }}
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["uv", "run", "-m", "src.api.main", "--host", "0.0.0.0"]

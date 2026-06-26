@@ -194,9 +194,8 @@ class TestSQLAlchemyRepository:
     async def test_count(self, repository, mock_session):
         """Test counting total records."""
         # Arrange
-        items = [SampleModel(id=i) for i in range(5)]
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = items
+        mock_result.scalar.return_value = 5
         mock_session.execute.return_value = mock_result
 
         # Act

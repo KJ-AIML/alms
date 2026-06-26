@@ -1,0 +1,13 @@
+"""Prometheus metrics endpoint."""
+
+from fastapi import APIRouter, Response
+from src.observability.metrics import generate_metrics
+
+router = APIRouter()
+
+
+@router.get("")
+async def metrics():
+    """Expose Prometheus metrics."""
+    metrics_data = generate_metrics()
+    return Response(content=metrics_data, media_type="text/plain")

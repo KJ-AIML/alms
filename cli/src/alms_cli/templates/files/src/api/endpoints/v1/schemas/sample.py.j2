@@ -1,0 +1,12 @@
+"""Sample request/response schemas."""
+
+from pydantic import BaseModel
+
+
+class SampleRequest(BaseModel):
+    query: str
+
+
+class SampleResponse(BaseModel):
+    message: str
+    result: str

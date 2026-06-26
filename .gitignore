@@ -33,3 +33,9 @@ htmlcov/
 
 # Docker
 .docker/
+# Internal phase reports (not for release)
+PHASE_*_REPORT.md
+RC_GATE_REPORT.md
+
+# Test cache
+.pytest_cache/

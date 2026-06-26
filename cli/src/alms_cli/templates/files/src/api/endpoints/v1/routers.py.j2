@@ -1,0 +1,14 @@
+"""Main v1 router aggregation."""
+
+from fastapi import APIRouter
+from src.api.endpoints.v1 import health
+{% if has_obs %}from src.api.endpoints.v1 import metrics
+{% endif %}{% if has_llm %}from src.api.endpoints.v1 import sample_agent, sample_di
+{% endif %}
+v1_router = APIRouter()
+
+v1_router.include_router(health.router, prefix="/health", tags=["Health"])
+{% if has_obs %}v1_router.include_router(metrics.router, prefix="/metrics", tags=["Monitoring"])
+{% endif %}{% if has_llm %}v1_router.include_router(sample_agent.router, prefix="/agent", tags=["Agent"])
+v1_router.include_router(sample_di.router, prefix="/di", tags=["DI Example"])
+{% endif %}

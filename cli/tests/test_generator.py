@@ -68,7 +68,9 @@ class TestResolveCapabilities:
         assert "tests" in caps
 
     def test_features_merge_with_profile(self):
-        caps = resolve_capabilities(profile="core-api", features=["Database (PostgreSQL)"])
+        caps = resolve_capabilities(
+            profile="core-api", features=["Database (PostgreSQL)"]
+        )
         assert "database" in caps
         assert "runtime_auth" in caps
 
@@ -102,7 +104,10 @@ class TestProfileMapping:
         for profile, caps in PROFILE_CAPABILITIES.items():
             for cap in caps:
                 from alms_cli.templates import ALL_CAPABILITIES
-                assert cap in ALL_CAPABILITIES, f"Profile {profile} has unknown capability: {cap}"
+
+                assert cap in ALL_CAPABILITIES, (
+                    f"Profile {profile} has unknown capability: {cap}"
+                )
 
     def test_all_profiles_include_runtime_auth_and_tests(self):
         for profile, caps in PROFILE_CAPABILITIES.items():
@@ -194,7 +199,7 @@ class TestGenerateCoreApi:
         gen.generate(caps)
 
         content = (tmp_project / ".env.example").read_text()
-        assert "DEBUG=true" in content
+        assert "DEBUG=True" in content
         assert "OPENAI" not in content
         assert "DATABASE" not in content
 

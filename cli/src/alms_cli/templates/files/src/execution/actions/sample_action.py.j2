@@ -1,0 +1,17 @@
+"""Sample action."""
+
+from typing import Any
+
+
+class SampleAction:
+    """Sample action that performs a discrete operation."""
+
+    def __init__(self, agent=None):
+        self.agent = agent
+
+    async def execute(self, query: str) -> dict[str, Any]:
+        """Execute the action."""
+        if self.agent is not None:
+            result = await self.agent.process(query)
+            return {"message": result, "status": "success"}
+        return {"message": f"Processed: {query}", "status": "success"}

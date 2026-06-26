@@ -1,0 +1,46 @@
+"""Dependencies for v1 endpoints."""
+
+from fastapi import Depends
+{% if has_db or has_ai %}from src.core.exceptions import AppException
+{% endif %}
+{% if has_db %}
+try:
+    from src.database.connection import get_db
+    _db_available = True
+except ImportError:
+    _db_available = False
+    get_db = None  # type: ignore
+
+
+def get_db_session():
+    if not _db_available:
+        raise AppException(message="Database deps not installed.", status_code=503, error_code="DB_UNAVAILABLE")
+    return get_db()
+{% else %}
+def get_db_session():
+    """Get database session."""
+    pass
+{% endif %}{% if has_ai %}
+
+try:
+    from src.agents.agent_manager.agent import create_sample_agent
+    _ai_available = True
+except ImportError:
+    _ai_available = False
+
+
+def get_sample_agent():
+    if not _ai_available:
+        raise AppException(message="AI deps not installed.", status_code=503, error_code="AGENT_UNAVAILABLE")
+    return create_sample_agent()
+
+
+def get_sample_action(agent=Depends(get_sample_agent)):
+    from src.execution.actions.sample_action import SampleAction
+    return SampleAction(agent=agent)
+
+
+def get_sample_usecase(action=Depends(get_sample_action)):
+    from src.execution.usecases.sample_usecase import SampleUseCase
+    return SampleUseCase(action=action)
+{% endif %}

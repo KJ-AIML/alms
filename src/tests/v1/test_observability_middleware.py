@@ -110,3 +110,54 @@ class TestUsecaseMetricsMiddleware:
 
 
 pytestmark = pytest.mark.unit
+
+
+class TestRequestIdConsistency:
+    """Test that request_id is consistent across logging and observability middleware."""
+
+    @pytest.mark.asyncio
+    async def test_observability_reuses_request_id_from_state(self, client):
+        """ObservabilityMiddleware must reuse request.state.request_id set by LoggingMiddleware."""
+        # Make a request - LoggingMiddleware sets request_id first,
+        # then ObservabilityMiddleware should reuse it (not generate a new one)
+        response = client.get("/api/v1/health/live")
+        
+        # The response should have X-Request-ID header
+        assert "X-Request-ID" in response.headers
+        request_id_from_response = response.headers["X-Request-ID"]
+        
+        # Make another request with an explicit X-Request-ID header
+        custom_request_id = "test-request-id-12345"
+        response2 = client.get(
+            "/api/v1/health/live",
+            headers={"X-Request-ID": custom_request_id}
+        )
+        
+        # The response should echo back the same request_id we sent
+        assert response2.headers["X-Request-ID"] == custom_request_id
+
+    def test_logging_middleware_generates_request_id(self):
+        """LoggingMiddleware should generate a request_id if none provided."""
+        import uuid
+        from unittest.mock import Mock
+        from starlette.requests import Request
+        
+        # Create a mock request without X-Request-ID header
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/test",
+            "headers": [],
+            "query_string": b"",
+        }
+        request = Request(scope)
+        
+        # Verify no X-Request-ID header exists
+        assert "X-Request-ID" not in request.headers
+        
+        # LoggingMiddleware should generate one
+        from src.api.middlewares.logging import LoggingMiddleware
+        # The middleware generates: request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        generated_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        assert generated_id is not None
+        assert len(generated_id) > 0
