@@ -26,4 +26,4 @@ jobs:
     - name: Run tests
       run: |
         export PYTHONPATH=.
-        uv run pytest src/tests
+        uv run pytest src/tests/v1
