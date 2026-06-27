@@ -19,16 +19,21 @@ console = Console()
 app.command(name="init")(init_command)
 app.add_typer(info_app, name="info")
 
+
 @app.callback(invoke_without_command=True)
 def main(ctx: typer.Context):
     """ALMS CLI - AI-First Backend Project Scaffolding"""
     if ctx.invoked_subcommand:
         return
-    
+
     console.print()
     console.print("[bold blue]╔══════════════════════════════════════════╗[/bold blue]")
-    console.print("[bold blue]║[/bold blue] [bold white]ALMS CLI[/bold white]                          [bold blue]║[/bold blue]")
-    console.print("[bold blue]║[/bold blue] [dim]AI-First Backend Project Scaffolding[/dim]  [bold blue]║[/bold blue]")
+    console.print(
+        "[bold blue]║[/bold blue] [bold white]ALMS CLI[/bold white]                          [bold blue]║[/bold blue]"
+    )
+    console.print(
+        "[bold blue]║[/bold blue] [dim]AI-First Backend Project Scaffolding[/dim]  [bold blue]║[/bold blue]"
+    )
     console.print("[bold blue]╚══════════════════════════════════════════╝[/bold blue]")
     console.print()
     console.print(f"[dim]Version: {__version__}[/dim]")

@@ -26,20 +26,22 @@ from alms_cli.templates import (
 
 console = Console()
 
-custom_style = Style([
-    ("qmark", "fg:#FFFFFF"),
-    ("question", "fg:#FFFFFF nobold"),
-    ("answer", "fg:#FFFFFF"),
-    ("pointer", "fg:#22C55E nobold"),
-    ("highlighted", "fg:#FFFFFF nobold"),
-    ("selected", "fg:#FFFFFF nobold"),
-    ("separator", "fg:#666666"),
-    ("instruction", "fg:#888888"),
-    ("text", "fg:#FFFFFF nobold"),
-    ("disabled", "fg:#666666 italic"),
-    ("checkbox", "fg:#666666 nobold"),
-    ("checkbox.selected", "fg:#22C55E nobold"),
-])
+custom_style = Style(
+    [
+        ("qmark", "fg:#FFFFFF"),
+        ("question", "fg:#FFFFFF nobold"),
+        ("answer", "fg:#FFFFFF"),
+        ("pointer", "fg:#22C55E nobold"),
+        ("highlighted", "fg:#FFFFFF nobold"),
+        ("selected", "fg:#FFFFFF nobold"),
+        ("separator", "fg:#666666"),
+        ("instruction", "fg:#888888"),
+        ("text", "fg:#FFFFFF nobold"),
+        ("disabled", "fg:#666666 italic"),
+        ("checkbox", "fg:#666666 nobold"),
+        ("checkbox.selected", "fg:#22C55E nobold"),
+    ]
+)
 
 VALID_PROFILES = list(PROFILE_CAPABILITIES.keys())
 
@@ -65,7 +67,9 @@ def init_command(
                 "Project name:",
                 default="my-alms-project",
                 style=custom_style,
-                validate=lambda x: len(x) > 0 and x.replace("-", "").replace("_", "").isalnum(),
+                validate=lambda x: (
+                    len(x) > 0 and x.replace("-", "").replace("_", "").isalnum()
+                ),
             ).ask()
 
             if not name:
@@ -114,8 +118,7 @@ def init_command(
         selected = questionary.checkbox(
             "Add capabilities to core-api:",
             choices=[
-                questionary.Choice(title=fn, checked=de)
-                for fn, de in feature_choices
+                questionary.Choice(title=fn, checked=de) for fn, de in feature_choices
             ],
             style=custom_style,
             instruction="(Use arrow keys to move, <space> to select)",

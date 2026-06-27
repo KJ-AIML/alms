@@ -33,7 +33,9 @@ def _generate_and_import(profile: str, extra_deps: list[str] | None = None) -> s
             try:
                 __import__(dep)
             except ImportError:
-                pytest.skip(f"Optional dependency '{dep}' not installed, skipping {profile} profile")
+                pytest.skip(
+                    f"Optional dependency '{dep}' not installed, skipping {profile} profile"
+                )
 
     tmp = Path(tempfile.mkdtemp(prefix=f"alms_smoke_{profile}_"))
     try:
@@ -115,17 +117,22 @@ class TestGeneratedCodeConsistency:
             gen.generate(caps)
 
             # Read the generated usecase file
-            usecase_content = (tmp / "src" / "execution" / "usecases" / "sample_usecase.py").read_text()
+            usecase_content = (
+                tmp / "src" / "execution" / "usecases" / "sample_usecase.py"
+            ).read_text()
             # Read the generated agent file
-            agent_content = (tmp / "src" / "api" / "endpoints" / "v1" / "sample_agent.py").read_text()
+            agent_content = (
+                tmp / "src" / "api" / "endpoints" / "v1" / "sample_agent.py"
+            ).read_text()
 
             # The class defined in usecase must match what agent imports
             assert "class SampleUseCase:" in usecase_content, (
                 "Generated usecase should define 'class SampleUseCase:'"
             )
-            assert "from src.execution.usecases.sample_usecase import SampleUseCase" in agent_content, (
-                "Generated agent should import 'SampleUseCase'"
-            )
+            assert (
+                "from src.execution.usecases.sample_usecase import SampleUseCase"
+                in agent_content
+            ), "Generated agent should import 'SampleUseCase'"
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
@@ -137,11 +144,17 @@ class TestGeneratedCodeConsistency:
             gen = TemplateGenerator("smoketest", tmp)
             gen.generate(caps)
 
-            schema_content = (tmp / "src" / "api" / "endpoints" / "v1" / "schemas" / "base.py").read_text()
-            health_content = (tmp / "src" / "api" / "endpoints" / "v1" / "health.py").read_text()
+            schema_content = (
+                tmp / "src" / "api" / "endpoints" / "v1" / "schemas" / "base.py"
+            ).read_text()
+            health_content = (
+                tmp / "src" / "api" / "endpoints" / "v1" / "health.py"
+            ).read_text()
 
             assert "Generic[T]" in schema_content, "AppResponse must be Generic[T]"
-            assert "AppResponse[dict]" in health_content, "Health endpoint uses AppResponse[dict]"
+            assert "AppResponse[dict]" in health_content, (
+                "Health endpoint uses AppResponse[dict]"
+            )
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
