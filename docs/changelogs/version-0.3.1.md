@@ -1,7 +1,8 @@
 # ALMS Changelog - Version 0.3.1
 
-**Release Date:** Unreleased  
-**Version:** 0.3.1  
+**Release Date:** 2026-06-27  
+**ALMS Version:** 0.3.1  
+**CLI Version:** 0.1.7  
 **Codename:** "Post-Release Cleanup"
 
 ---
@@ -145,9 +146,10 @@ This release is fully backward compatible with ALMS 0.3.0.
 
 No action required for existing projects. To benefit from the httpx 1.x compatibility:
 
-1. Regenerate your project with ALMS CLI 0.3.1:
+1. Regenerate your project with ALMS CLI 0.1.7:
 
    ```bash
+   pip install alms-cli==0.1.7
    alms init my-project --profile <profile>
    ```
 
