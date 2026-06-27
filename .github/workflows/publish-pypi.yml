@@ -2,6 +2,26 @@ name: Publish to PyPI
 
 on:
   workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to publish (cli only for v0.3.1)'
+        required: true
+        type: choice
+        options:
+          - cli
+          - root
+          - both
+        default: cli
+      cli_version:
+        description: 'CLI version to publish'
+        required: false
+        type: string
+        default: '0.1.7'
+      dry_run:
+        description: 'Dry run (build and verify but do not upload)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   publish:
@@ -11,6 +31,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate inputs
+        run: |
+          if [ "${{ inputs.package }}" != "cli" ]; then
+            echo "❌ ERROR: This workflow is configured for CLI-only publishing"
+            echo "Only 'cli' package is allowed for v0.3.1 release"
+            exit 1
+          fi
+          echo "✅ Package: ${{ inputs.package }}"
+          echo "✅ CLI version: ${{ inputs.cli_version }}"
+          echo "✅ Dry run: ${{ inputs.dry_run }}"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -23,31 +54,62 @@ jobs:
       - name: Install twine
         run: uv pip install --system twine
 
-      - name: Build root package
-        run: uv build
-
       - name: Build CLI package
         working-directory: cli
         run: uv build
 
-      - name: Verify artifacts
+      - name: Verify CLI artifacts
+        working-directory: cli
         run: |
-          ls -la dist/
-          ls -la cli/dist/
-          test -f dist/axtra_alms-0.3.0-py3-none-any.whl
-          test -f dist/axtra_alms-0.3.0.tar.gz
-          test -f cli/dist/alms_cli-0.1.6-py3-none-any.whl
-          test -f cli/dist/alms_cli-0.1.6.tar.gz
+          echo "=== CLI Artifacts ==="
+          ls -lh dist/
+          echo ""
+          echo "=== Verify version ${{ inputs.cli_version }} ==="
+          WHEEL="dist/alms_cli-${{ inputs.cli_version }}-py3-none-any.whl"
+          SDIST="dist/alms_cli-${{ inputs.cli_version }}.tar.gz"
+          test -f "$WHEEL" || { echo "❌ Wheel not found"; exit 1; }
+          test -f "$SDIST" || { echo "❌ Sdist not found"; exit 1; }
+          echo "✅ CLI artifacts verified"
+
+      - name: Verify Jinja2 templates
+        working-directory: cli
+        run: |
+          WHEEL="dist/alms_cli-${{ inputs.cli_version }}-py3-none-any.whl"
+          TEMPLATE_COUNT=$(python -c "
+          import zipfile
+          z = zipfile.ZipFile('$WHEEL')
+          count = len([f for f in z.namelist() if f.endswith('.j2')])
+          print(count)
+          ")
+          echo "Jinja2 templates in wheel: $TEMPLATE_COUNT"
+          if [ "$TEMPLATE_COUNT" -ne 66 ]; then
+            echo "❌ Expected 66 templates, found $TEMPLATE_COUNT"
+            exit 1
+          fi
+          echo "✅ Template count verified"
 
       - name: Twine check
+        working-directory: cli
         run: |
           twine check dist/*
-          twine check cli/dist/*
+          echo "✅ Twine check passed"
 
       - name: Publish to PyPI
+        if: inputs.dry_run == false
+        working-directory: cli
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          twine upload dist/*
-          twine upload cli/dist/*
+          echo "=== Publishing alms-cli ${{ inputs.cli_version }} to PyPI ==="
+          twine upload dist/alms_cli-${{ inputs.cli_version }}-py3-none-any.whl
+          twine upload dist/alms_cli-${{ inputs.cli_version }}.tar.gz
+          echo "✅ Published successfully"
+
+      - name: Dry run summary
+        if: inputs.dry_run == true
+        run: |
+          echo "=== DRY RUN COMPLETE ==="
+          echo "Would have published:"
+          echo "  - alms-cli ${{ inputs.cli_version }}"
+          echo "Artifacts built and verified but NOT uploaded."
