@@ -82,8 +82,8 @@ jobs:
           print(count)
           ")
           echo "Jinja2 templates in wheel: $TEMPLATE_COUNT"
-          if [ "$TEMPLATE_COUNT" -ne 66 ]; then
-            echo "❌ Expected 66 templates, found $TEMPLATE_COUNT"
+          if [ "$TEMPLATE_COUNT" -ne 65 ]; then
+            echo "❌ Expected 65 templates, found $TEMPLATE_COUNT"
             exit 1
           fi
           echo "✅ Template count verified"

@@ -1,6 +1,6 @@
 [project]
 name = "alms-cli"
-version = "0.1.9"
+version = "0.1.10"
 description = "ALMS CLI - Beautiful project scaffolding tool for AI-first backends"
 readme = "README.md"
 requires-python = ">=3.13"
