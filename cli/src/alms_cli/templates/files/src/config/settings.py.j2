@@ -29,10 +29,15 @@ class Settings(BaseSettings):
     DATABASE_PASSWORD: str = "postgres"
 {% endif %}{% if has_redis %}    REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
+    REDIS_PASSWORD: str | None = None
+    REDIS_DB: int = 0
 {% endif %}{% if has_obs %}    METRICS_ENABLED: bool = True
     TRACING_ENABLED: bool = True
     OTLP_ENDPOINT: str | None = None
 {% endif %}    LOG_LEVEL: str = "info"
+    LOG_SAVE_TO_FILE: bool = False
+    LOG_FILE: str = "src/logs/app.log"
+    LOG_AUTO_SETUP: bool = True
     SECRET_KEY: str = "your-default-secret-key"
     ALLOWED_HOSTS: list[str] = ["*"]
     X_API_KEY: str | None = None

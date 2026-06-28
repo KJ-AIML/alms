@@ -471,3 +471,123 @@ def test_non_db_get_db_session_raises():
             )
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+# --- v0.3.4 regression tests ---
+
+
+def test_env_example_vars_all_in_settings():
+    """F-01: .env.example must not contain vars that Settings doesn't accept."""
+    for profile in ("observable", "full"):
+        tmp = _generate_profile(profile)
+        try:
+            env_example = (tmp / ".env.example").read_text(encoding="utf-8")
+            settings = (tmp / "src" / "config" / "settings.py").read_text(
+                encoding="utf-8"
+            )
+            # Extract var names from .env.example (lines with = that aren't comments)
+            env_vars = []
+            for line in env_example.split("\n"):
+                line = line.strip()
+                if (
+                    line
+                    and not line.startswith("#")
+                    and "=" in line
+                    and not line.startswith('"""')
+                ):
+                    var_name = line.split("=")[0].strip()
+                    if var_name and var_name.isidentifier():
+                        env_vars.append(var_name)
+            missing = [v for v in env_vars if v not in settings]
+            assert not missing, (
+                f"{profile}: .env.example has vars not in Settings: {missing}"
+            )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_profile_deps_in_base_dependencies():
+    """F-02: Profile-required deps must be in base dependencies, not only in extras."""
+    for profile, required_deps in [
+        ("observable", ["prometheus"]),
+        ("full", ["prometheus", "langchain", "scalar-fastapi", "sqlalchemy"]),
+        ("llm-agent", ["langchain", "scalar-fastapi"]),
+        ("db-agent", ["sqlalchemy"]),
+    ]:
+        tmp = _generate_profile(profile)
+        try:
+            pyproject = (tmp / "pyproject.toml").read_text(encoding="utf-8")
+            base_section = pyproject.split("[project.optional-dependencies]")[0]
+            for dep in required_deps:
+                assert dep in base_section, (
+                    f"{profile}: {dep} must be in base dependencies"
+                )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_agent_test_uses_dependency_overrides():
+    """F-03: Generated agent test must use dependency_overrides, not real API calls."""
+    for profile in ("llm-agent", "workflow-agent", "full"):
+        tmp = _generate_profile(profile)
+        try:
+            test_agent = (tmp / "src" / "tests" / "v1" / "test_agent.py").read_text(
+                encoding="utf-8"
+            )
+            assert "dependency_overrides" in test_agent, (
+                f"{profile}: test_agent.py must use dependency_overrides"
+            )
+            assert "mock_usecase" in test_agent or "AsyncMock" in test_agent, (
+                f"{profile}: test_agent.py must mock the usecase"
+            )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_no_pytest_ini_generated():
+    """F-08: pytest.ini must not be generated (config is in pyproject.toml)."""
+    for profile in PROFILES:
+        tmp = _generate_profile(profile)
+        try:
+            assert not (tmp / "pytest.ini").exists(), (
+                f"{profile}: pytest.ini should not be generated"
+            )
+            pyproject = (tmp / "pyproject.toml").read_text(encoding="utf-8")
+            assert "tool.pytest" in pyproject, (
+                f"{profile}: pyproject.toml must have pytest config"
+            )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_pip_dev_optional_deps():
+    """F-06: [project.optional-dependencies] must have dev group for pip users."""
+    for profile in PROFILES:
+        tmp = _generate_profile(profile)
+        try:
+            pyproject = (tmp / "pyproject.toml").read_text(encoding="utf-8")
+            assert "[project.optional-dependencies]" in pyproject
+            assert "dev = [" in pyproject
+            assert "pytest" in pyproject
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_readme_has_architecture_sections():
+    """F-05: Generated README must have Architecture, Capabilities, Testing sections."""
+    for profile in PROFILES:
+        tmp = _generate_profile(profile)
+        try:
+            readme = (tmp / "README.md").read_text(encoding="utf-8")
+            assert "## Architecture" in readme, (
+                f"{profile}: README missing Architecture section"
+            )
+            assert "## Profile" in readme or "## Capabilities" in readme, (
+                f"{profile}: README missing Profile/Capabilities section"
+            )
+            assert "## Testing" in readme, f"{profile}: README missing Testing section"
+            assert "ASGITransport" in readme, (
+                f"{profile}: README missing ASGITransport note"
+            )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)

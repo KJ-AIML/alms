@@ -5,17 +5,17 @@ description = "ALMS AI-first backend starter"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard]>=0.122.0",
-    "pydantic>=2.12.5",
-    "pydantic-settings>=2.12.0",
-    "uvicorn>=0.38.0",
-]
-{% if extra_blocks %}
-[project.optional-dependencies]
-{{ extra_blocks }}{% if full_extra_specs %}full = [
-{% for spec in full_extra_specs %}    "{{ spec }}",
+{% for dep in all_deps %}    "{{ dep }}",
 {% endfor %}]
-{% endif %}{% endif %}
+
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.14.11",
+]
+
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",

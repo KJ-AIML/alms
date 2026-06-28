@@ -1,18 +1,35 @@
 """Agent endpoint tests."""
 
 import pytest
+from unittest.mock import AsyncMock
+{% if has_ai %}
+from src.api.main import app
+from src.api.endpoints.v1.dependencies import get_sample_usecase
 
+
+@pytest.fixture(autouse=True)
+def _mock_agent_dependency():
+    """Override agent dependency so no real API call is made."""
+    mock_usecase = AsyncMock()
+    mock_usecase.execute = AsyncMock(return_value={"usecase_result": {"response": "mocked"}})
+    app.dependency_overrides[get_sample_usecase] = lambda: mock_usecase
+    yield
+    app.dependency_overrides.clear()
+{% endif %}
 
 @pytest.mark.asyncio
 async def test_sample_agent(client):
     """Test sample agent endpoint."""
     response = await client.post("/api/v1/agent/sample", json={"query": "test"})
-    # Endpoint returns 200 when AI deps are available, 503 when not installed
-    assert response.status_code in (200, 503)
+{% if has_ai %}
+    # Dependency is mocked — always returns 200
+    assert response.status_code == 200
     data = response.json()
-    assert "success" in data
-    if response.status_code == 200:
-        assert data["success"] is True
-    else:
-        assert data["success"] is False
-        assert data["error"]["code"] == "AGENT_UNAVAILABLE"
+    assert data["success"] is True
+{% else %}
+    # No AI capability — endpoint returns 503
+    assert response.status_code == 503
+    data = response.json()
+    assert data["success"] is False
+    assert data["error"]["code"] == "AGENT_UNAVAILABLE"
+{% endif %}

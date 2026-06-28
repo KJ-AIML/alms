@@ -1,31 +1,80 @@
 # {{ project_name }}
 
-> **The AI-First Backend for Scalable, Intelligent Applications.**
+> AI-first backend scaffolded by [ALMS](https://github.com/KJ-AIML/alms).
 
 ## Quick Start
 
-### Prerequisites
-
-- Python 3.13+
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
-
-### 1. Setup
-
 ```bash
+# 1. Environment
 cp .env.example .env
-```
 
-### 2. Install Dependencies
-
-```bash
+# 2. Install (uv)
 uv sync
-```
 
-### 3. Start the Application
-
-```bash
+# 3. Run
 uv run -m src.api.main
 ```
 
-The API will be available at:
-- API: http://localhost:3000
+**pip users:**
+```bash
+pip install -e ".[dev]"
+python -m src.api.main
+```
+
+API: http://localhost:3000
+{% if has_scalar %}API Docs: http://localhost:3000/docs{% endif %}
+
+## Profile & Capabilities
+
+- **Profile:** `{{ profile }}`
+- **Capabilities:** {{ capabilities | join(', ') }}
+
+Capabilities control which features are generated:
+
+| Capability | What it adds |
+|-----------|-------------|
+| runtime_auth | API key middleware, security headers |
+| llm | LangChain provider boundary, sample agent |
+| langgraph | LangGraph workflow support |
+| database | SQLAlchemy + asyncpg, Alembic migrations |
+| redis | Redis client for caching |
+| observability | OpenTelemetry + Prometheus metrics |
+| scalar_docs | Scalar API documentation at /docs |
+| tests | pytest suite with ASGITransport |
+| docker | Dockerfile + docker-compose |
+| ci | GitHub Actions CI workflow |
+
+## Architecture
+
+```
+Endpoint → UseCase → Action → Agent/Workflow → Provider
+```
+
+- **Endpoint** (`src/api/endpoints/v1/`): HTTP layer, request validation, DI wiring
+- **UseCase** (`src/execution/usecases/`): Business logic orchestration
+- **Action** (`src/execution/actions/`): Single-step operations
+- **Agent** (`src/agents/`): LLM reasoning (when `llm` capability enabled)
+- **Provider** (`src/providers/`): External service adapters (OpenAI, DB, cache)
+
+Dependencies flow through FastAPI's `Depends()` — no direct instantiation in endpoints.
+
+## Testing
+
+```bash
+uv run pytest src/tests
+```
+
+Tests use `httpx.ASGITransport` with `AsyncClient` — no real server needed.
+{% if has_ai %}
+**AI provider mocking:** Agent tests use `app.dependency_overrides` to mock the usecase. No API keys required.
+{% endif %}
+**Database tests:** Skip automatically when `DATABASE_URL` is not set.
+
+## Environment
+
+Copy `.env.example` to `.env` and adjust:
+
+- `ALLOWED_HOSTS`: **Must change from `["*"]` before production**
+- `SECRET_KEY`: **Must change from default before production**
+- `OPENAI_API_KEY`: Only needed if `AI_ENABLED=True`
+- `DATABASE_URL`: Only needed for database capability

@@ -218,10 +218,14 @@ class TestGenerateFull:
         assert "opentelemetry" in content
         assert "prometheus" in content
         assert "scalar-fastapi" in content
-        # optional-dependencies section exists
+        # optional-dependencies section exists with dev group
         assert "[project.optional-dependencies]" in content
-        # full extra exists
-        assert "full = [" in content
+        assert "dev = [" in content
+        # all profile deps are in base dependencies (not in extras)
+        deps_section = content.split("[project.optional-dependencies]")[0]
+        assert "langchain" in deps_section
+        assert "prometheus" in deps_section
+        assert "scalar-fastapi" in deps_section
 
     def test_routers_has_everything(self, tmp_project):
         caps = resolve_capabilities(profile="full")

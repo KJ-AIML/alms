@@ -54,7 +54,6 @@ BASE_CONFIG_TEMPLATES = [
     "README.md",
     ".env.example",
     ".gitignore",
-    "pytest.ini",
     "rules/project_rules.md",
     "docs/01-System-Design.md",
     "docs/02-Design-Patterns.md",
@@ -268,6 +267,14 @@ class TemplateGenerator:
         extra_flag = ""
         if extras:
             extra_flag = " " + " ".join(f"--extra {extra}" for extra in extras)
+        # ponytail: profile-required deps go in base so `uv sync` / `pip install -e .` works
+        core_deps = [
+            "fastapi[standard]>=0.122.0",
+            "pydantic>=2.12.5",
+            "pydantic-settings>=2.12.0",
+            "uvicorn>=0.38.0",
+        ]
+        all_deps = core_deps + sorted(set(all_specs))
         return {
             "project_name": self.project_name,
             "capabilities": sorted(self.capabilities),
@@ -277,6 +284,7 @@ class TemplateGenerator:
             "extra_blocks": "".join(_extra_block(extra) for extra in extras),
             "full_extra_specs": sorted(set(all_specs)),
             "extra_flag": extra_flag,
+            "all_deps": all_deps,
             "has_ai": self._has("llm") or self._has("langgraph"),
             "has_llm": self._has("llm"),
             "has_langgraph": self._has("langgraph"),
