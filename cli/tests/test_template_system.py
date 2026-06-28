@@ -426,3 +426,48 @@ def test_provider_class_name_aligned_with_reference():
             )
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_middleware_add_order_matches_reference():
+    """Middleware must be added in reverse execution order: LoggingMiddleware last (outermost)."""
+    import re
+
+    for profile in PROFILES:
+        tmp = _generate_profile(profile)
+        try:
+            content = (tmp / "src" / "api" / "main.py").read_text(encoding="utf-8")
+            # Extract add_middleware calls in order (handles multi-line calls)
+            adds = re.findall(r"app\.add_middleware\(\s*(\w+)", content)
+            assert len(adds) >= 4, (
+                f"{profile}: expected at least 4 middleware, got {len(adds)}"
+            )
+            # LoggingMiddleware must be added LAST (outermost = executes first)
+            assert adds[-1] == "LoggingMiddleware", (
+                f"{profile}: LoggingMiddleware must be added last (outermost), "
+                f"but add order is: {adds}"
+            )
+            # CORSMiddleware must be added FIRST (innermost = executes last)
+            assert adds[0] == "CORSMiddleware", (
+                f"{profile}: CORSMiddleware must be added first (innermost), "
+                f"but add order is: {adds}"
+            )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_non_db_get_db_session_raises():
+    """Non-database profiles must have get_db_session() raise RuntimeError, not return None."""
+    for profile in ("core-api", "observable"):
+        tmp = _generate_profile(profile)
+        try:
+            content = (
+                tmp / "src" / "api" / "endpoints" / "v1" / "dependencies.py"
+            ).read_text(encoding="utf-8")
+            assert "raise RuntimeError" in content, (
+                f"{profile}: non-db get_db_session() must raise RuntimeError"
+            )
+            assert "Database is not enabled" in content, (
+                f"{profile}: error message must mention database not enabled"
+            )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)

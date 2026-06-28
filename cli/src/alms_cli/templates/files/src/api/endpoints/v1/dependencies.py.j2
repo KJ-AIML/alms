@@ -18,8 +18,11 @@ def get_db_session():
     return get_db()
 {% else %}
 def get_db_session():
-    """Get database session."""
-    pass
+    """Get database session (stub for non-database profiles)."""
+    raise RuntimeError(
+        "Database is not enabled in this profile. "
+        "Regenerate with --profile db-agent or full to enable database support."
+    )
 {% endif %}{% if has_ai %}
 
 try:

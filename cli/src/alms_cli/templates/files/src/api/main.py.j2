@@ -38,13 +38,8 @@ def create_app() -> FastAPI:
         redoc_url=None,
     )
 
-    # Middleware registration order matters - added in reverse execution order
-    # LoggingMiddleware executes first on incoming requests
-    app.add_middleware(LoggingMiddleware)
-{% if has_obs %}    app.add_middleware(ObservabilityMiddleware)
-{% endif %}    app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(APIKeyMiddleware)
-    app.add_middleware(ErrorHandlerMiddleware)
+    # Middleware registration order matters: last added = outermost = executes first on incoming request.
+    # Intended request flow: Logging → APIKey → ErrorHandler → SecurityHeaders → Observability → CORS
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.ALLOWED_HOSTS,
@@ -52,6 +47,11 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(ErrorHandlerMiddleware)
+    app.add_middleware(APIKeyMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
+{% if has_obs %}    app.add_middleware(ObservabilityMiddleware)
+{% endif %}    app.add_middleware(LoggingMiddleware)
 
     app.include_router(api_router, prefix=settings.API_PREFIX)
 {% if has_scalar %}

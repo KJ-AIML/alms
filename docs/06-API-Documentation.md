@@ -55,11 +55,13 @@ All API responses use the standardized `AppResponse` wrapper:
 Check service health status.
 
 **Request:**
+
 ```bash
 curl http://localhost:3000/api/v1/health
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -80,6 +82,7 @@ curl http://localhost:3000/api/v1/health
 Execute an AI agent with the provided query.
 
 **Request:**
+
 ```bash
 curl -X POST http://localhost:3000/api/v1/agent \
   -H "Content-Type: application/json" \
@@ -89,6 +92,7 @@ curl -X POST http://localhost:3000/api/v1/agent \
 ```
 
 **Request Body:**
+
 ```json
 {
   "query": "string (required) - The query to send to the agent"
@@ -96,6 +100,7 @@ curl -X POST http://localhost:3000/api/v1/agent \
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -110,6 +115,7 @@ curl -X POST http://localhost:3000/api/v1/agent \
 ```
 
 **Error Responses:**
+
 - `400` - Validation error (missing query)
 - `500` - Agent execution error
 
@@ -120,11 +126,13 @@ curl -X POST http://localhost:3000/api/v1/agent \
 Prometheus-compatible metrics endpoint for observability and monitoring.
 
 **Request:**
+
 ```bash
 curl http://localhost:3000/api/v1/metrics
 ```
 
 **Response:**
+
 ```text
 # HELP http_requests_total Total HTTP requests
 # TYPE http_requests_total counter
@@ -177,11 +185,13 @@ cache_hits_total{operation="get"} 89
 Demonstrate dependency injection with message service.
 
 **Request:**
+
 ```bash
 curl http://localhost:3000/api/v1/sample_di
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -198,14 +208,17 @@ curl http://localhost:3000/api/v1/sample_di
 Get a specific message by ID.
 
 **Request:**
+
 ```bash
 curl http://localhost:3000/api/v1/sample_di/123
 ```
 
 **Path Parameters:**
+
 - `message_id` (int, required) - The message ID
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -219,6 +232,7 @@ curl http://localhost:3000/api/v1/sample_di/123
 ```
 
 **Error Responses:**
+
 - `404` - Message not found
 
 ## Error Codes
@@ -272,6 +286,7 @@ Authorization: Bearer <jwt_token>
 Authenticate user and get JWT token.
 
 **Request:**
+
 ```bash
 curl -X POST http://localhost:3000/api/v1/auth/login \
   -H "Content-Type: application/json" \
@@ -282,6 +297,7 @@ curl -X POST http://localhost:3000/api/v1/auth/login \
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -354,6 +370,7 @@ curl -X POST http://localhost:3000/api/v1/agent \
 The API documentation is available at `http://localhost:3000/docs` (powered by Scalar).
 
 Features:
+
 - Interactive API explorer
 - Request/response examples
 - Try it out functionality
@@ -380,4 +397,20 @@ Real-time communication for streaming agent responses:
 ws://localhost:3000/ws/agent
 ```
 
-**Updated:** v0.2.0 - Added Prometheus metrics endpoint for observability
+## Reference vs Generated Scaffold Routes
+
+The ALMS repository contains two sets of sample routes:
+
+**Reference Implementation** (this repo's `src/`):
+
+- `/api/v1/agent/execute` — Agent execution endpoint
+- `/api/v1/sample_di/sample-di` — Dependency injection demo
+
+**Generated Scaffold** (from `alms init`):
+
+- `/api/v1/agent/sample` — Agent execution endpoint
+- `/api/v1/di/sample` — Dependency injection demo
+
+The generated scaffold uses shorter, simpler route names. When creating new projects with `alms init`, the generated routes are the contract. The reference implementation may show richer demo routes for documentation purposes.
+
+**Updated:** v0.3.2 - Clarified reference vs generated scaffold routes

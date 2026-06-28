@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: 'Package to publish (cli only for v0.3.1)'
+        description: 'Package to publish. Currently supports CLI-only patch publishing.'
         required: true
         type: choice
         options:
@@ -16,7 +16,7 @@ on:
         description: 'CLI version to publish'
         required: false
         type: string
-        default: '0.1.7'
+        default: '0.1.8'
       dry_run:
         description: 'Dry run (build and verify but do not upload)'
         required: false
@@ -36,7 +36,7 @@ jobs:
         run: |
           if [ "${{ inputs.package }}" != "cli" ]; then
             echo "❌ ERROR: This workflow is configured for CLI-only publishing"
-            echo "Only 'cli' package is allowed for v0.3.1 release"
+            echo "Only 'cli' package is currently supported"
             exit 1
           fi
           echo "✅ Package: ${{ inputs.package }}"
