@@ -1,10 +1,9 @@
 """AI provider factory."""
 
-from functools import lru_cache
-from src.providers.ai.langchain_model_loader import LangChainModelProvider
+from src.providers.ai.base import AIModelProvider
+from src.providers.ai.langchain_model_loader import LangchainModelLoader
 
 
-@lru_cache
-def get_ai_provider() -> LangChainModelProvider:
+def get_ai_provider() -> AIModelProvider:
     """Return the configured AI provider."""
-    return LangChainModelProvider()
+    return LangchainModelLoader()

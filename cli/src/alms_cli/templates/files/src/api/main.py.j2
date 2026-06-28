@@ -47,13 +47,25 @@ def create_app() -> FastAPI:
     app.add_middleware(ErrorHandlerMiddleware)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.ALLOWED_HOSTS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
     app.include_router(api_router, prefix=settings.API_PREFIX)
+{% if has_scalar %}
+
+    # Scalar API Documentation
+    try:
+        from scalar_fastapi import get_scalar_api_reference
+
+        @app.get("/docs", include_in_schema=False)
+        async def scalar_html():
+            return get_scalar_api_reference(openapi_url=app.openapi_url, title=app.title)
+    except ImportError:
+        pass
+{% endif %}
     return app
 
 
@@ -67,13 +79,3 @@ if __name__ == "__main__":
         port=settings.SERVER_PORT,
         reload=settings.DEBUG,
     )
-{% if has_scalar %}
-
-    try:
-        from scalar_fastapi import get_scalar_api_reference
-        @app.get("/docs", include_in_schema=False)
-        async def scalar_html():
-            return get_scalar_api_reference(openapi_url=app.openapi_url, title=app.title)
-    except ImportError:
-        pass
-{% endif %}

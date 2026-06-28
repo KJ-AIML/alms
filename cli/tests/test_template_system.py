@@ -318,3 +318,111 @@ def test_core_api_stable_markers():
                 assert marker in content, f"missing {marker} in {relative_path}"
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# v0.3.2 scaffold correctness regression tests
+# ---------------------------------------------------------------------------
+
+
+def test_scalar_docs_route_inside_create_app():
+    """F-01: Scalar docs route must be registered inside create_app(), not after if __name__."""
+    for profile in ("llm-agent", "full"):
+        tmp = _generate_profile(profile)
+        try:
+            content = (tmp / "src" / "api" / "main.py").read_text(encoding="utf-8")
+            # The scalar_html function must appear BEFORE the if __name__ guard
+            scalar_pos = content.find("scalar_html")
+            name_guard_pos = content.find("if __name__")
+            assert scalar_pos > 0, f"{profile}: scalar_html not found in main.py"
+            assert name_guard_pos > 0, f"{profile}: if __name__ not found in main.py"
+            assert scalar_pos < name_guard_pos, (
+                f"{profile}: scalar_html (pos {scalar_pos}) must be before "
+                f"if __name__ (pos {name_guard_pos})"
+            )
+            # Also verify it's inside create_app (before 'return app')
+            create_app_pos = content.find("def create_app")
+            return_app_pos = content.rfind("return app")
+            assert create_app_pos < scalar_pos < return_app_pos, (
+                f"{profile}: scalar_html must be inside create_app()"
+            )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_cors_uses_settings_allowed_hosts():
+    """F-04: CORS must use settings.ALLOWED_HOSTS, not hardcoded ['*']."""
+    for profile in PROFILES:
+        tmp = _generate_profile(profile)
+        try:
+            content = (tmp / "src" / "api" / "main.py").read_text(encoding="utf-8")
+            assert "allow_origins=settings.ALLOWED_HOSTS" in content, (
+                f"{profile}: CORS must use settings.ALLOWED_HOSTS"
+            )
+            hardcoded_wildcard = "allow_origins=[" + '"*"' + "]"
+            assert hardcoded_wildcard not in content, (
+                f"{profile}: CORS must not hardcode allow_origins with wildcard"
+            )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_model_provider_in_ai_capable_settings():
+    """F-02: MODEL_PROVIDER must exist in AI-capable generated settings."""
+    for profile in ("llm-agent", "workflow-agent", "full"):
+        tmp = _generate_profile(profile)
+        try:
+            content = (tmp / "src" / "config" / "settings.py").read_text(
+                encoding="utf-8"
+            )
+            assert "MODEL_PROVIDER" in content, (
+                f"{profile}: MODEL_PROVIDER missing from generated settings"
+            )
+            assert 'MODEL_PROVIDER: str = "openai"' in content, (
+                f"{profile}: MODEL_PROVIDER should default to 'openai'"
+            )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_model_provider_absent_in_non_ai_profiles():
+    """F-02: MODEL_PROVIDER should not appear in non-AI profiles."""
+    for profile in ("core-api", "db-agent", "observable"):
+        tmp = _generate_profile(profile)
+        try:
+            content = (tmp / "src" / "config" / "settings.py").read_text(
+                encoding="utf-8"
+            )
+            assert "MODEL_PROVIDER" not in content, (
+                f"{profile}: MODEL_PROVIDER should not appear in non-AI settings"
+            )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_provider_class_name_aligned_with_reference():
+    """F-03: Generated provider class must be LangchainModelLoader (matching reference)."""
+    for profile in ("llm-agent", "workflow-agent", "full"):
+        tmp = _generate_profile(profile)
+        try:
+            loader_content = (
+                tmp / "src" / "providers" / "ai" / "langchain_model_loader.py"
+            ).read_text(encoding="utf-8")
+            factory_content = (
+                tmp / "src" / "providers" / "ai" / "factory.py"
+            ).read_text(encoding="utf-8")
+            assert "class LangchainModelLoader" in loader_content, (
+                f"{profile}: class must be LangchainModelLoader"
+            )
+            assert "LangChainModelProvider" not in loader_content, (
+                f"{profile}: old name LangChainModelProvider should not appear"
+            )
+            assert "LangChainModelProvider" not in factory_content, (
+                f"{profile}: old name LangChainModelProvider should not appear in factory"
+            )
+            # Factory must return abstract AIModelProvider, not concrete class
+            assert "-> AIModelProvider" in factory_content, (
+                f"{profile}: factory must return AIModelProvider (abstract)"
+            )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)

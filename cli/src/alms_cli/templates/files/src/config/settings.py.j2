@@ -15,7 +15,8 @@ class Settings(BaseSettings):
 {% if has_ai %}    AI_ENABLED: bool = False
 {% endif %}{% if has_db %}    DATABASE_ENABLED: bool = True
 {% endif %}{% if has_redis %}    REDIS_ENABLED: bool = False
-{% endif %}{% if has_ai %}    OPENAI_API_KEY: str = ""
+{% endif %}{% if has_ai %}    MODEL_PROVIDER: str = "openai"  # reserved for future provider selection; only "openai" is supported
+    OPENAI_API_KEY: str = ""
     OPENAI_MODEL_BASIC: str = "gpt-4o-mini"
     OPENAI_MODEL_REASONING: str = "gpt-4o"
 {% endif %}{% if has_db %}    DATABASE_URL: str | None = None

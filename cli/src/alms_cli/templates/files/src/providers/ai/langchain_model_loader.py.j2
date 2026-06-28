@@ -5,8 +5,8 @@ from src.config.settings import settings
 from src.providers.ai.base import AIModelProvider
 
 
-class LangChainModelProvider(AIModelProvider):
-    """LangChain AI model provider."""
+class LangchainModelLoader(AIModelProvider):
+    """LangChain AI model loader."""
 
     def get_chat_model(self, tier: str = "basic"):
         """Get LLM instance."""
@@ -24,4 +24,4 @@ class LangChainModelProvider(AIModelProvider):
 
 def get_llm(model: str = "basic"):
     """Get LLM instance."""
-    return LangChainModelProvider().get_chat_model(tier=model)
+    return LangchainModelLoader().get_chat_model(tier=model)
