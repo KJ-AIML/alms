@@ -125,14 +125,14 @@ class TestGeneratedCodeConsistency:
                 tmp / "src" / "api" / "endpoints" / "v1" / "sample_agent.py"
             ).read_text()
 
-            # The class defined in usecase must match what agent imports
+            # The class defined in usecase must match what DI provides
             assert "class SampleUseCase:" in usecase_content, (
                 "Generated usecase should define 'class SampleUseCase:'"
             )
             assert (
-                "from src.execution.usecases.sample_usecase import SampleUseCase"
+                "from src.api.endpoints.v1.dependencies import get_sample_usecase"
                 in agent_content
-            ), "Generated agent should import 'SampleUseCase'"
+            ), "Generated agent should use DI via 'get_sample_usecase'"
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 

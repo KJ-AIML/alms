@@ -1,18 +1,38 @@
 """Rich UI components for beautiful terminal output."""
 
+import sys
+from pathlib import Path
+
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
-from rich.tree import Tree
 from rich.progress import (
+    BarColumn,
     Progress,
     SpinnerColumn,
     TextColumn,
-    BarColumn,
     TimeElapsedColumn,
 )
 from rich.table import Table
-from rich import box
-from pathlib import Path
+from rich.tree import Tree
+
+
+def _stdout_supports_unicode() -> bool:
+    """Check whether stdout can encode Unicode symbols (e.g. not cp1252)."""
+    encoding = getattr(sys.stdout, "encoding", None) or ""
+    try:
+        "\u2139".encode(encoding)
+        return True
+    except (UnicodeEncodeError, LookupError):
+        return False
+
+
+# ponytail: ASCII fallbacks for Windows cp1252 terminals where Unicode glyphs crash stdout.
+_unicode_ok = _stdout_supports_unicode()
+SYM_OK = "\u2713" if _unicode_ok else "[OK]"
+SYM_ERR = "\u2717" if _unicode_ok else "[X]"
+SYM_INFO = "\u2139" if _unicode_ok else "[i]"
+SYM_WARN = "\u26a0" if _unicode_ok else "[!]"
 
 console = Console()
 
@@ -42,22 +62,22 @@ def print_step(step_num: int, total: int, message: str):
 
 def print_success(message: str):
     """Print a success message."""
-    console.print(f"[bold green]✓[/bold green] [green]{message}[/green]")
+    console.print(f"[bold green]{SYM_OK}[/bold green] [green]{message}[/green]")
 
 
 def print_error(message: str):
     """Print an error message."""
-    console.print(f"[bold red]✗[/bold red] [red]{message}[/red]")
+    console.print(f"[bold red]{SYM_ERR}[/bold red] [red]{message}[/red]")
 
 
 def print_info(message: str):
     """Print an info message."""
-    console.print(f"[bold blue]ℹ[/bold blue] [blue]{message}[/blue]")
+    console.print(f"[bold blue]{SYM_INFO}[/bold blue] [blue]{message}[/blue]")
 
 
 def print_warning(message: str):
     """Print a warning message."""
-    console.print(f"[bold yellow]⚠[/bold yellow] [yellow]{message}[/yellow]")
+    console.print(f"[bold yellow]{SYM_WARN}[/bold yellow] [yellow]{message}[/yellow]")
 
 
 def create_progress():

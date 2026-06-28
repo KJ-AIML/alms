@@ -1,15 +1,15 @@
 """Sample agent endpoint."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from src.api.endpoints.v1.dependencies import get_sample_usecase
 from src.api.endpoints.v1.schemas.base import AppResponse
-from src.execution.usecases.sample_usecase import SampleUseCase
+from src.api.endpoints.v1.schemas.sample import SampleRequest
 
 router = APIRouter()
 
 
 @router.post("/sample")
-async def sample_agent(query: str):
+async def sample_agent(request: SampleRequest, usecase=Depends(get_sample_usecase)):
     """Sample agent endpoint."""
-    usecase = SampleUseCase()
-    result = await usecase.execute(query)
+    result = await usecase.execute(query=request.query)
     return AppResponse(success=True, data=result)

@@ -29,7 +29,11 @@ async def ready_check():
     try:
         from src.database.connection import check_database_connection
     except ImportError:
-        return AppResponse(success=False, data={"status": "degraded", "ready": False})
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content=AppResponse(success=False, data={"status": "degraded", "ready": False}).model_dump(),
+        )
     db_ready = await check_database_connection()
     if db_ready:
         return AppResponse(success=True, data={"status": "ready", "ready": True, "dependencies": {"database": "healthy"}})

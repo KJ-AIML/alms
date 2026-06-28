@@ -1,7 +1,9 @@
 """Application settings."""
 
-from pydantic_settings import BaseSettings
 from functools import lru_cache
+
+from pydantic import ConfigDict
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -44,9 +46,7 @@ class Settings(BaseSettings):
             if "*" in self.ALLOWED_HOSTS:
                 raise ValueError("ALLOWED_HOSTS must not contain * in production")
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = ConfigDict(env_file=".env", case_sensitive=True)
 
 
 @lru_cache()

@@ -7,4 +7,12 @@ import pytest
 async def test_sample_agent(client):
     """Test sample agent endpoint."""
     response = await client.post("/api/v1/agent/sample", json={"query": "test"})
-    assert response.status_code == 200
+    # Endpoint returns 200 when AI deps are available, 503 when not installed
+    assert response.status_code in (200, 503)
+    data = response.json()
+    assert "success" in data
+    if response.status_code == 200:
+        assert data["success"] is True
+    else:
+        assert data["success"] is False
+        assert data["error"]["code"] == "AGENT_UNAVAILABLE"
