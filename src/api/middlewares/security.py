@@ -1,3 +1,5 @@
+import secrets
+
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -33,7 +35,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         header_key = request.headers.get("X-API-KEY")
-        if header_key != api_key:
+        if not header_key or not secrets.compare_digest(header_key, api_key):
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content=AppResponse(

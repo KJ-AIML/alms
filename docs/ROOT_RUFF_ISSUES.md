@@ -1,12 +1,11 @@
 # Root Ruff Issues Tracking
 
-**Status:** Pre-existing, not release-blocking  
-**Target Cleanup:** Future release (post-0.3.1)  
-**Last Updated:** 2026-06-27
+**Status:** Resolved (Option 3 below)  
+**Last Updated:** 2026-07-02
 
 ## Summary
 
-The root source code (`src/`) has 30 pre-existing ruff linting issues that were present before the 0.3.0 release. These issues are primarily in test files and do not affect functionality or the public API.
+The root source code (`src/`) previously had 30 pre-existing ruff linting issues. The 3 production-code issues (unused imports in `observability.py`/`tracing.py`, one import ordering issue in `dependencies.py`) were fixed directly. The remaining 27 test-file issues are resolved via `[tool.ruff.lint.per-file-ignores]` in `pyproject.toml`, per Option 3 below. `ruff check src` now passes cleanly and is enforced in CI.
 
 **Command to reproduce:**
 
@@ -95,13 +94,7 @@ Add ruff configuration to relax rules for test files:
 
 ## Decision
 
-**Defer to future release.** The issues are pre-existing, not release-blocking, and most are in test files where strict linting is less critical.
-
-For v0.3.1, focus on:
-
-- ✅ Generated test httpx 1.x compatibility (completed)
-- ✅ CLI formatting cleanup (completed)
-- ⏸️ Root ruff issues (deferred)
+**Resolved via Option 3.** Production-code issues were fixed directly; test-file issues are ignored per-file since strict import/unused-var linting is less valuable there than test readability. `ruff check src` is now a CI gate, so no new issues can accumulate silently.
 
 ## Related
 

@@ -23,7 +23,20 @@ jobs:
     - name: Install dependencies
       run: uv sync
       
-    - name: Run tests
+    - name: Lint (ruff)
+      run: uv run ruff check src
+
+    - name: Run unit tests
       run: |
         export PYTHONPATH=.
         uv run pytest src/tests/v1
+
+    # DATABASE_ENABLED=False here because CI has no Postgres service --
+    # these suites only exercise app plumbing (routing, observability,
+    # error handling), not DB behavior. Add a postgres service container
+    # if DB-specific e2e/integration coverage is needed later.
+    - name: Run e2e/integration tests
+      run: |
+        export PYTHONPATH=.
+        export DATABASE_ENABLED=False
+        uv run pytest src/tests/e2e src/tests/integration

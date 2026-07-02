@@ -127,3 +127,13 @@ settings = Settings()
 if not settings.DEBUG and settings.AI_ENABLED and not settings.OPENAI_API_KEY:
     logger = logging.getLogger(__name__)
     logger.warning("AI_ENABLED=True but OPENAI_API_KEY is not set in production mode!")
+
+# Post-initialization: warn if no API key is configured in production --
+# APIKeyMiddleware treats an unset X_API_KEY as "no auth enforced", which
+# may be intentional (auth handled upstream) so this warns rather than
+# fails startup like validate_production_settings() does for SECRET_KEY.
+if not settings.DEBUG and not settings.X_API_KEY:
+    logger = logging.getLogger(__name__)
+    logger.warning(
+        "X_API_KEY is not set in production mode -- API endpoints are unauthenticated!"
+    )

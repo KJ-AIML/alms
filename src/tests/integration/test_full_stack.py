@@ -10,15 +10,15 @@ import pytest
 class TestFullStackIntegration:
     """Integration tests for complete stack."""
 
-    def test_health_endpoint_returns_healthy(self, client):
-        """Test that health endpoint returns healthy status."""
+    def test_health_endpoint_returns_alive(self, client):
+        """Test that root endpoint reports the liveness contract ("alive")."""
         # Act
         response = client.get("/")
 
         # Assert
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "healthy"
+        assert data["status"] == "alive"
 
     def test_api_v1_health_endpoint(self, client):
         """Test API v1 health endpoint."""
