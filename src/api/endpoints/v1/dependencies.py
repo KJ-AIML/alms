@@ -7,6 +7,7 @@ when AI dependencies (langchain, langgraph, openai) are not installed.
 from fastapi import Depends
 
 from src.config.logs_config import get_logger
+from src.core.exceptions import AppException
 
 logger = get_logger(__name__)
 
@@ -25,8 +26,6 @@ try:
     _SampleUseCase = _SU
 except ImportError:
     logger.info("AI dependencies not installed -- sample agent DI unavailable")
-
-from src.core.exceptions import AppException
 
 
 def get_sample_agent():

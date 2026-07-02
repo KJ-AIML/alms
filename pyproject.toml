@@ -84,3 +84,8 @@ capabilities = [
     "docker",
     "ci",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Test files favor readability/structure over strict import and unused-var
+# rules (setup-before-import patterns, assigned-for-clarity result vars).
+"src/tests/**/*.py" = ["E402", "F401", "F841", "F811"]
