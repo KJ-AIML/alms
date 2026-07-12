@@ -1,0 +1,15 @@
+# Bounded configuration for the FIRST live provider run only (DevSpec Section 80).
+# Tighter than audit.default.toml; it never weakens the global defaults, it only overrides
+# them for a single deliberate first-live acceptance run. Contains no secret and no model
+# (the model is supplied explicitly at execution time, never defaulted here). Loading is
+# fail-closed: a missing file raises rather than falling back to a larger budget.
+
+[budget]
+hard_cap_usd = 1.00      # first-live hard cap; a live run is refused if absent/0
+soft_cap_usd = 0.25      # per-run soft cap (advisory)
+max_live_calls = 8       # first-live hard ceiling on provider calls
+
+[execution]
+max_output_tokens = 128
+default_timeout_ms = 30000
+retries = 0              # no automatic audit retries; the SDK client also sets max_retries=0
