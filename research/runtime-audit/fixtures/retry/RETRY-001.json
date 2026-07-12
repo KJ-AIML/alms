@@ -1,0 +1,24 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "RETRY-001",
+  "feature": "retry",
+  "tier": "STRESS",
+  "cost_class": "offline",
+  "intent": "Use an offline fault-injection server to trigger a deterministic transient failure (429/500) and observe outbound attempt count and backoff. Runtime retry is not provider retry, and hidden retries are a first-class finding source.",
+  "summary": "Fault-injected transient failure",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "Say hello." }] }
+  ],
+  "requirements": {
+    "live_required": false,
+    "supports_mock_mode": true,
+    "capabilities": ["generation", "retry"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 16, "timeout_ms": 30000, "stream": false, "max_attempts": 1 },
+  "expected_invariants": { "outbound_attempts_observed": true, "backoff_behavior_recorded": true, "hidden_retry_detectable": true },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION", "INCONCLUSIVE"],
+  "evidence_requirements": {
+    "raw": ["fault_server_log", "outbound_attempts"],
+    "normalized": ["error", "provider_extension"]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "STR-004",
+  "feature": "structured_output",
+  "tier": "STRESS",
+  "cost_class": "live_stress",
+  "intent": "Submit an edge schema keyword (regex pattern constraint) and record whether the runtime enforces it, rejects the request, or silently reduces the schema.",
+  "summary": "Unsupported or edge schema keyword",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "The currency code is USD." }] }
+  ],
+  "output_schema": {
+    "type": "object",
+    "required": ["currency"],
+    "properties": { "currency": { "type": "string", "pattern": "^[A-Z]{3}$" } },
+    "additionalProperties": false
+  },
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": false,
+    "capabilities": ["generation", "structured_output"],
+    "provider_extension_allowed": true
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 64, "timeout_ms": 30000, "stream": false, "max_attempts": 1 },
+  "expected_invariants": { "observed_structured_mode_recorded": true, "schema_transformations_recorded": true },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION", "UNSUPPORTED_DECLARED", "UNSUPPORTED_OBSERVED", "FAIL_INVARIANT"],
+  "evidence_requirements": {
+    "raw": ["raw_response", "submitted_schema", "schema_transformations"],
+    "normalized": ["structured_output_completed", "observed_structured_mode", "provider_extension"]
+  }
+}

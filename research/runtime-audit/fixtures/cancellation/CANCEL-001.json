@@ -1,0 +1,29 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "CANCEL-001",
+  "feature": "cancellation",
+  "tier": "STRESS",
+  "cost_class": "live_stress",
+  "intent": "Cancel after the first useful delta and separate caller termination from confirmed provider-side termination. Local cancellation does not prove the provider stopped work.",
+  "summary": "Cancel after first useful delta",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "Write a long paragraph describing different kinds of clouds." }] }
+  ],
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": false,
+    "capabilities": ["generation", "streaming", "cancellation"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 512, "timeout_ms": 30000, "stream": true, "max_attempts": 1, "cancel_after_ms": 500 },
+  "expected_invariants": {
+    "caller_termination_observed": true,
+    "provider_work_evidence_recorded": true,
+    "final_status_present": true,
+    "usage_finality_marked": true
+  },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION", "INCONCLUSIVE"],
+  "evidence_requirements": {
+    "raw": ["raw_stream_events", "cancellation_signal"],
+    "normalized": ["text_delta", "cancelled", "usage_updated"]
+  }
+}

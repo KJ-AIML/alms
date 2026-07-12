@@ -1,0 +1,24 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "USAGE-002",
+  "feature": "usage",
+  "tier": "STRESS",
+  "cost_class": "live_stress",
+  "intent": "Streaming and cancelled usage: record when usage becomes available and mark partial versus final. Partial usage after cancellation must be marked partial, never fabricated.",
+  "summary": "Streaming and cancelled usage",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "Write several sentences about mountains." }] }
+  ],
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": false,
+    "capabilities": ["generation", "streaming", "usage", "cancellation"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 256, "timeout_ms": 30000, "stream": true, "max_attempts": 1, "cancel_after_ms": 500 },
+  "expected_invariants": { "usage_timing_recorded": true, "partial_final_semantics_marked": true, "usage_not_fabricated": true },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION", "INCONCLUSIVE"],
+  "evidence_requirements": {
+    "raw": ["raw_stream_events", "raw_usage"],
+    "normalized": ["usage_updated", "cancelled"]
+  }
+}

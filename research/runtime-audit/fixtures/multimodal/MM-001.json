@@ -1,0 +1,30 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "MM-001",
+  "feature": "multimodal",
+  "tier": "OPTIONAL",
+  "cost_class": "live_core",
+  "intent": "A synthetic image plus text prompt: record content-part mapping and result semantics. Multimodal is often unsupported; unsupported is not the same as failed.",
+  "summary": "Synthetic image plus text",
+  "messages": [
+    {
+      "role": "user",
+      "parts": [
+        { "kind": "text", "text": "Reply with the single dominant color word for this image." },
+        { "kind": "image", "text": "synthetic-image:solid-red-square-16x16.png" }
+      ]
+    }
+  ],
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": false,
+    "capabilities": ["generation", "multimodal"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 16, "timeout_ms": 30000, "stream": false, "max_attempts": 1 },
+  "expected_invariants": { "content_part_mapping_recorded": true, "result_semantics_recorded": true },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION", "UNSUPPORTED_DECLARED", "UNSUPPORTED_OBSERVED"],
+  "evidence_requirements": {
+    "raw": ["raw_request", "raw_response"],
+    "normalized": ["response_completed"]
+  }
+}

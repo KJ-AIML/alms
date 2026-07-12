@@ -1,0 +1,22 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "ROLE-001",
+  "feature": "roles",
+  "tier": "BASE",
+  "cost_class": "live_core",
+  "intent": "A system instruction and a user message are both represented without silent loss.",
+  "summary": "System plus user roles",
+  "messages": [
+    { "role": "system", "parts": [{ "kind": "text", "text": "You are a terse assistant. Answer in exactly one word." }] },
+    { "role": "user", "parts": [{ "kind": "text", "text": "What color is a clear daytime sky?" }] }
+  ],
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": true,
+    "capabilities": ["generation", "roles"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 16, "timeout_ms": 30000, "stream": false, "max_attempts": 1 },
+  "expected_invariants": { "system_instruction_represented": true, "non_empty_assistant_content": true },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION"],
+  "evidence_requirements": { "raw": ["raw_request", "raw_response"], "normalized": ["response_completed"] }
+}

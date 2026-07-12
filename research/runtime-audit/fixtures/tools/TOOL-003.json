@@ -1,0 +1,38 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "TOOL-003",
+  "feature": "tools",
+  "tier": "BASE",
+  "cost_class": "live_core",
+  "intent": "A tool result is fed back and the assistant continues; call-to-result linkage stays stable.",
+  "summary": "Tool result round trip",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "What is the weather in Paris?" }] },
+    { "role": "assistant", "parts": [{ "kind": "tool_call", "text": "get_weather({\"city\": \"Paris\"})" }] },
+    { "role": "tool", "parts": [{ "kind": "tool_result", "text": "{\"city\": \"Paris\", \"temp_c\": 18, \"summary\": \"cloudy\"}" }] }
+  ],
+  "tools": [
+    {
+      "name": "get_weather",
+      "description": "Return the current weather for a city.",
+      "parameters": {
+        "type": "object",
+        "required": ["city"],
+        "properties": { "city": { "type": "string" } },
+        "additionalProperties": false
+      }
+    }
+  ],
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": false,
+    "capabilities": ["generation", "tools"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 128, "timeout_ms": 30000, "stream": false, "max_attempts": 1, "tool_choice": "auto" },
+  "expected_invariants": { "stable_call_linkage": true, "continuation_after_tool_result": true, "non_empty_assistant_content": true },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION"],
+  "evidence_requirements": {
+    "raw": ["raw_response"],
+    "normalized": ["tool_call_completed", "response_completed"]
+  }
+}

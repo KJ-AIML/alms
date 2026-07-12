@@ -1,0 +1,30 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "STR-001",
+  "feature": "structured_output",
+  "tier": "BASE",
+  "cost_class": "live_core",
+  "intent": "Extract a flat typed object; record the observed structured-output mode (native vs prompted).",
+  "summary": "Flat object extraction",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "Alice is 30 years old." }] }
+  ],
+  "output_schema": {
+    "type": "object",
+    "required": ["name", "age"],
+    "properties": { "name": { "type": "string" }, "age": { "type": "integer" } },
+    "additionalProperties": false
+  },
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": false,
+    "capabilities": ["generation", "structured_output"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 128, "timeout_ms": 30000, "stream": false, "max_attempts": 1 },
+  "expected_invariants": { "schema_valid": true, "expected_fields_equal": { "name": "Alice", "age": 30 } },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION"],
+  "evidence_requirements": {
+    "raw": ["raw_response", "submitted_schema"],
+    "normalized": ["structured_output_completed", "observed_structured_mode"]
+  }
+}

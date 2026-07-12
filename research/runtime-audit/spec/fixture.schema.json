@@ -2,9 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "alms.dev/runtime-audit-fixture/v0",
   "title": "Runtime Audit Fixture v0",
-  "$comment": "AUDIT INFRASTRUCTURE ONLY. Describes intent, execution controls, and expected invariants in a language-neutral way (DevSpec Section 27 and Section 28). It is NOT the ALMS runtime contract. output_schema being present does not imply the runtime must produce NATIVE structured output: schema-valid output != native structured output.",
+  "$comment": "AUDIT INFRASTRUCTURE ONLY. Language- and runtime-neutral case (DevSpec Sections 27, 28, 56-58). It is NOT the ALMS runtime contract. Fixtures assert SEMANTIC invariants, never exact model prose. output_schema present does not imply native structured output: schema-valid output != native structured output. allowed_outcomes keeps unsupported distinct from failed. evidence_requirements keeps raw evidence distinct from normalized interpretation. Provider-specific fields belong only inside the optional extension object.",
   "type": "object",
-  "required": ["spec", "id", "feature", "summary", "requirements", "execution", "expected_invariants"],
+  "additionalProperties": false,
+  "required": [
+    "spec", "id", "feature", "tier", "cost_class", "summary",
+    "requirements", "execution", "expected_invariants",
+    "allowed_outcomes", "evidence_requirements"
+  ],
   "oneOf": [
     { "required": ["messages"] },
     { "required": ["embedding_inputs"] }
@@ -19,12 +24,20 @@
         "cancellation", "timeout", "retry", "errors", "usage", "embeddings", "multimodal"
       ]
     },
+    "tier": { "type": "string", "enum": ["BASE", "STRESS", "OPTIONAL"] },
+    "cost_class": {
+      "type": "string",
+      "enum": ["offline", "live_core", "live_stress"],
+      "$comment": "offline = no provider call (e.g. fault-injected); live_core = Tier 2 cheap; live_stress = Tier 3."
+    },
+    "intent": { "type": "string" },
     "summary": { "type": "string", "minLength": 1 },
     "messages": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": ["role", "parts"],
         "properties": {
           "role": { "type": "string", "enum": ["system", "user", "assistant", "tool"] },
@@ -33,6 +46,7 @@
             "minItems": 1,
             "items": {
               "type": "object",
+              "additionalProperties": false,
               "required": ["kind"],
               "properties": {
                 "kind": { "type": "string", "enum": ["text", "image", "audio", "tool_result", "tool_call"] },
@@ -49,30 +63,71 @@
       "items": { "type": "string" }
     },
     "output_schema": { "type": "object" },
-    "tools": { "type": "array", "items": { "type": "object" } },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "parameters": { "type": "object" }
+        }
+      }
+    },
     "requirements": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["live_required", "capabilities"],
       "properties": {
         "live_required": { "type": "boolean" },
         "supports_mock_mode": { "type": "boolean" },
-        "capabilities": { "type": "array", "items": { "type": "string" } },
+        "capabilities": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
         "accepted_capability_modes": { "type": "array", "items": { "type": "string" } },
-        "provider_extension_allowed": { "type": "boolean" },
-        "tier": { "type": "string", "enum": ["base", "stress", "optional"] }
+        "provider_extension_allowed": { "type": "boolean" }
       }
     },
     "execution": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "temperature": { "type": "number", "minimum": 0 },
         "max_output_tokens": { "type": "integer", "minimum": 1 },
         "timeout_ms": { "type": "integer", "minimum": 1 },
         "stream": { "type": "boolean" },
         "max_attempts": { "type": "integer", "minimum": 1 },
-        "cancel_after_ms": { "type": "integer", "minimum": 1 }
+        "cancel_after_ms": { "type": "integer", "minimum": 1 },
+        "tool_choice": { "type": "string", "enum": ["auto", "required", "forced", "none"] }
       }
     },
-    "expected_invariants": { "type": "object" }
+    "expected_invariants": {
+      "type": "object",
+      "$comment": "Semantic invariants only (DevSpec Section 44). Never assert exact model prose.",
+      "minProperties": 1
+    },
+    "allowed_outcomes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "PASS", "PASS_WITH_EXTENSION", "UNSUPPORTED_DECLARED", "UNSUPPORTED_OBSERVED",
+          "BLOCKED_CONFIGURATION", "FAIL_INVARIANT", "ERROR_RUNTIME", "INCONCLUSIVE"
+        ]
+      }
+    },
+    "evidence_requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw", "normalized"],
+      "properties": {
+        "raw": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "normalized": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      }
+    },
+    "extension": {
+      "type": "object",
+      "$comment": "Optional escape hatch for provider-specific hints; never required to interpret the fixture."
+    }
   }
 }

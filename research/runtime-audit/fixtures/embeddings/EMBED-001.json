@@ -1,0 +1,22 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "EMBED-001",
+  "feature": "embeddings",
+  "tier": "OPTIONAL",
+  "cost_class": "live_core",
+  "intent": "A single text embedding: record vector output shape, dimensions, and usage metadata. Embedding evidence is separate from generation invariants (feeds Q-005).",
+  "summary": "Single text embedding",
+  "embedding_inputs": ["The quick brown fox jumps over the lazy dog."],
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": false,
+    "capabilities": ["embeddings"]
+  },
+  "execution": { "timeout_ms": 30000, "max_attempts": 1 },
+  "expected_invariants": { "vector_output_shape_recorded": true, "embedding_dimensions_present": true, "usage_metadata_recorded": true },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION", "UNSUPPORTED_DECLARED", "BLOCKED_CONFIGURATION"],
+  "evidence_requirements": {
+    "raw": ["raw_embedding_response"],
+    "normalized": ["usage_updated"]
+  }
+}

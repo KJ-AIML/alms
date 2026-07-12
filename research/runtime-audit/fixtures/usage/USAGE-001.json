@@ -1,0 +1,24 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "USAGE-001",
+  "feature": "usage",
+  "tier": "BASE",
+  "cost_class": "live_core",
+  "intent": "Non-streaming usage: record presence, provenance, and completeness. Missing usage must stay missing, never coerced to zero.",
+  "summary": "Non-stream usage",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "Reply with one short sentence about rain." }] }
+  ],
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": false,
+    "capabilities": ["generation", "usage"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 48, "timeout_ms": 30000, "stream": false, "max_attempts": 1 },
+  "expected_invariants": { "usage_presence_recorded": true, "usage_provenance_recorded": true, "usage_not_fabricated": true },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION"],
+  "evidence_requirements": {
+    "raw": ["raw_usage"],
+    "normalized": ["usage_updated"]
+  }
+}

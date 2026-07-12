@@ -14,7 +14,7 @@ from alms_audit.schemas import SCHEMA_FILES, is_valid, validation_errors, valida
 VALID_PROBE_REQUEST = {
     "protocol_version": "alms.dev/probe-protocol/v0",
     "run_id": "r1",
-    "fixture_path": "fixtures/generation/generation-basic-001.json",
+    "fixture_path": "fixtures/generation/GEN-001.json",
     "lane": {
         "lane_id": "openai-native",
         "runtime_layer": "openai",
@@ -29,7 +29,7 @@ VALID_PROBE_REQUEST = {
 VALID_PROBE_RESPONSE = {
     "spec": "alms.dev/probe-response/v0",
     "run_id": "r1",
-    "fixture_id": "generation-basic-001",
+    "fixture_id": "GEN-001",
     "fixture_hash": "sha256:abc",
     "probe_id": "openai-native",
     "probe_version": "0.0.0",
@@ -64,7 +64,7 @@ VALID_TRANSCRIPT = {
 VALID_RESULT = {
     "spec": "alms.dev/runtime-audit-result/v0",
     "run_id": "r1",
-    "fixture_id": "generation-basic-001",
+    "fixture_id": "GEN-001",
     "lane_id": "openai-native",
     "status": "PASS",
     "raw_manifest": "runs/r1/raw-manifest.json",
@@ -76,11 +76,11 @@ VALID_FINDING = {
     "severity": "F1",
     "status": "proposed",
     "runtime_lanes": ["openai-native"],
-    "fixture_ids": ["structured-person-001"],
+    "fixture_ids": ["STR-001"],
     "assumption_id": "A-001",
     "expected_behavior": "native structured output",
     "observed_behavior": "prompt-coerced json",
-    "reproduction_command": "alms-audit run --fixture structured-person-001",
+    "reproduction_command": "alms-audit run --fixture STR-001",
     "raw_evidence_refs": [],
     "normalized_evidence_refs": [],
     "semantic_impact": "shape differs",

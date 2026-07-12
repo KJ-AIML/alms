@@ -1,0 +1,24 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "STREAM-001",
+  "feature": "streaming",
+  "tier": "BASE",
+  "cost_class": "live_core",
+  "intent": "A text stream delivers ordered incremental deltas and reaches an observable terminal state.",
+  "summary": "Text stream",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "Count from one to five, one number per line." }] }
+  ],
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": false,
+    "capabilities": ["generation", "streaming"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 64, "timeout_ms": 30000, "stream": true, "max_attempts": 1 },
+  "expected_invariants": { "stream_started": true, "incremental_text": true, "stream_has_monotonic_sequence": true, "terminal_state_present": true },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION"],
+  "evidence_requirements": {
+    "raw": ["raw_stream_events"],
+    "normalized": ["response_started", "text_delta", "response_completed"]
+  }
+}

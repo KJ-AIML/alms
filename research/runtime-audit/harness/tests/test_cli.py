@@ -16,8 +16,8 @@ def test_validate_passes_on_committed_corpus() -> None:
 def test_list_fixtures_lists_examples(capsys) -> None:
     assert main(["list-fixtures"]) == 0
     out = capsys.readouterr().out
-    assert "generation-basic-001" in out
-    assert "structured-person-001" in out
+    assert "GEN-001" in out
+    assert "STR-001" in out
 
 
 def test_list_lanes_lists_canonical_lanes(capsys) -> None:

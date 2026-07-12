@@ -17,7 +17,7 @@ from . import __version__, runner
 from .budget import BudgetError
 from .config import load_config
 from .environment import credential_presence
-from .fixtures import load_fixtures
+from .fixtures import duplicate_ids, load_fixtures
 from .lanes import load_lanes
 from .planner import build_plan
 from .schemas import SCHEMA_FILES, spec_dir, validation_errors, validator_for
@@ -59,6 +59,12 @@ def cmd_validate(args: argparse.Namespace) -> int:
         else:
             print(f"ok   fixture {fx.id}")
 
+    # 2b. Fixture IDs must be unique across the whole corpus.
+    dups = duplicate_ids(fixtures)
+    if dups:
+        ok = False
+        print(f"FAIL duplicate fixture ids: {', '.join(dups)}")
+
     # 3. Lane config sanity (three independent identifiers must be present).
     for lane in load_lanes(root):
         for field in ("lane_id", "runtime_layer", "provider"):
@@ -71,12 +77,16 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 
 def cmd_list_fixtures(args: argparse.Namespace) -> int:
-    fixtures = load_fixtures(args.root)
+    fixtures = load_fixtures(args.root)  # already id-sorted (deterministic)
+    if getattr(args, "feature", None):
+        fixtures = [f for f in fixtures if f.feature == args.feature]
+    if getattr(args, "tier", None):
+        fixtures = [f for f in fixtures if f.tier == args.tier]
     if not fixtures:
         print("(no fixtures found)")
         return 0
     for fx in fixtures:
-        print(f"{fx.id}\t{fx.feature}\t{fx.summary}")
+        print(f"{fx.id}\t{fx.feature}\t{fx.tier}\t{fx.summary}")
     return 0
 
 
@@ -155,13 +165,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     for name, func in (
         ("validate", cmd_validate),
-        ("list-fixtures", cmd_list_fixtures),
         ("list-lanes", cmd_list_lanes),
         ("plan", cmd_plan),
     ):
         p = sub.add_parser(name)
         _add_root(p)
         p.set_defaults(func=func)
+
+    lf = sub.add_parser("list-fixtures")
+    _add_root(lf)
+    lf.add_argument("--feature", default=None, help="filter by feature family")
+    lf.add_argument(
+        "--tier", default=None, choices=["BASE", "STRESS", "OPTIONAL"], help="filter by tier"
+    )
+    lf.set_defaults(func=cmd_list_fixtures)
 
     run_p = sub.add_parser("run", help="dry-run by default; live requires --live --confirm-live")
     _add_root(run_p)

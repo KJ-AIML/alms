@@ -1,0 +1,36 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "TOOL-004",
+  "feature": "tools",
+  "tier": "STRESS",
+  "cost_class": "live_stress",
+  "intent": "Two independent tool calls in one turn; measure count, distinct IDs, ordering, and whether parallel calls are supported. A single tool call does not prove parallel support.",
+  "summary": "Parallel independent tool calls",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "Compare the weather in Paris and Tokyo." }] }
+  ],
+  "tools": [
+    {
+      "name": "get_weather",
+      "description": "Return the current weather for a city.",
+      "parameters": {
+        "type": "object",
+        "required": ["city"],
+        "properties": { "city": { "type": "string" } },
+        "additionalProperties": false
+      }
+    }
+  ],
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": false,
+    "capabilities": ["generation", "tools"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 192, "timeout_ms": 30000, "stream": false, "max_attempts": 1, "tool_choice": "auto" },
+  "expected_invariants": { "tool_call_count": 2, "distinct_call_ids_recorded": true, "parallel_support_recorded": true },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION", "UNSUPPORTED_OBSERVED"],
+  "evidence_requirements": {
+    "raw": ["raw_response", "raw_tool_arguments"],
+    "normalized": ["tool_call_started", "tool_call_completed"]
+  }
+}

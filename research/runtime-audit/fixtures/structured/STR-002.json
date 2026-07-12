@@ -1,0 +1,45 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "STR-002",
+  "feature": "structured_output",
+  "tier": "BASE",
+  "cost_class": "live_core",
+  "intent": "Extract a nested object with an array; nested values must be preserved.",
+  "summary": "Nested object plus array",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "Order 12 contains two items: 2 apples and 3 pears." }] }
+  ],
+  "output_schema": {
+    "type": "object",
+    "required": ["order_id", "items"],
+    "properties": {
+      "order_id": { "type": "integer" },
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["name", "qty"],
+          "properties": { "name": { "type": "string" }, "qty": { "type": "integer" } },
+          "additionalProperties": false
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": false,
+    "capabilities": ["generation", "structured_output"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 192, "timeout_ms": 30000, "stream": false, "max_attempts": 1 },
+  "expected_invariants": {
+    "schema_valid": true,
+    "nested_values_preserved": true,
+    "expected_fields_equal": { "order_id": 12 }
+  },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION"],
+  "evidence_requirements": {
+    "raw": ["raw_response", "submitted_schema"],
+    "normalized": ["structured_output_completed", "observed_structured_mode"]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "TIMEOUT-001",
+  "feature": "timeout",
+  "tier": "STRESS",
+  "cost_class": "live_stress",
+  "intent": "A deadline expires during a slow response; record the timeout owner, category, and any retry interaction.",
+  "summary": "Deadline during slow response",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "Write a very long, detailed essay about the ocean." }] }
+  ],
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": false,
+    "capabilities": ["generation", "timeout"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 1024, "timeout_ms": 1000, "stream": false, "max_attempts": 1 },
+  "expected_invariants": { "timeout_owner_recorded": true, "timeout_category_present": true, "retry_interaction_recorded": true },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION", "INCONCLUSIVE"],
+  "evidence_requirements": {
+    "raw": ["raw_timing", "raw_exception"],
+    "normalized": ["error"]
+  }
+}

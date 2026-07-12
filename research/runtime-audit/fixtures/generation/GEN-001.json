@@ -1,0 +1,21 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "GEN-001",
+  "feature": "generation",
+  "tier": "BASE",
+  "cost_class": "live_core",
+  "intent": "Basic single-turn text generation yields a completed, non-empty assistant response.",
+  "summary": "Basic text generation",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "Reply with a short friendly greeting." }] }
+  ],
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": true,
+    "capabilities": ["generation"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 32, "timeout_ms": 30000, "stream": false, "max_attempts": 1 },
+  "expected_invariants": { "non_empty_assistant_content": true, "terminal_state_present": true },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION"],
+  "evidence_requirements": { "raw": ["raw_response"], "normalized": ["response_completed"] }
+}

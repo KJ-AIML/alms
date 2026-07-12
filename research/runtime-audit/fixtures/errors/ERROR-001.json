@@ -1,0 +1,25 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "ERROR-001",
+  "feature": "errors",
+  "tier": "BASE",
+  "cost_class": "live_core",
+  "intent": "An invalid model identifier (supplied at run time) yields a native error plus a normalized candidate category. The candidate category must not replace the preserved native details.",
+  "summary": "Invalid model identifier",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "Hello." }] }
+  ],
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": true,
+    "capabilities": ["generation", "errors"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 16, "timeout_ms": 30000, "stream": false, "max_attempts": 1 },
+  "expected_invariants": { "error_category_present": true, "native_error_preserved": true, "candidate_category_recorded": true },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION"],
+  "evidence_requirements": {
+    "raw": ["raw_exception", "provider_error_code"],
+    "normalized": ["error"]
+  },
+  "extension": { "error_trigger": "invalid_model_identifier" }
+}

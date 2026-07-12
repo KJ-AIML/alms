@@ -1,0 +1,36 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "STREAM-002",
+  "feature": "streaming",
+  "tier": "STRESS",
+  "cost_class": "live_stress",
+  "intent": "A streamed tool call must preserve call identity while argument fragments arrive. A text stream is not a structured-output stream.",
+  "summary": "Tool-call argument stream",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "What is the weather in Paris?" }] }
+  ],
+  "tools": [
+    {
+      "name": "get_weather",
+      "description": "Return the current weather for a city.",
+      "parameters": {
+        "type": "object",
+        "required": ["city"],
+        "properties": { "city": { "type": "string" } },
+        "additionalProperties": false
+      }
+    }
+  ],
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": false,
+    "capabilities": ["generation", "tools", "streaming"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 128, "timeout_ms": 30000, "stream": true, "max_attempts": 1, "tool_choice": "auto" },
+  "expected_invariants": { "tool_call_identity_preserved": true, "argument_fragments_associated": true },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION", "UNSUPPORTED_OBSERVED"],
+  "evidence_requirements": {
+    "raw": ["raw_stream_events"],
+    "normalized": ["tool_call_started", "tool_call_arguments_delta", "tool_call_completed"]
+  }
+}

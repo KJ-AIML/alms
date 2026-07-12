@@ -1,0 +1,36 @@
+{
+  "spec": "alms.dev/runtime-audit-fixture/v0",
+  "id": "TOOL-001",
+  "feature": "tools",
+  "tier": "BASE",
+  "cost_class": "live_core",
+  "intent": "A single auto tool call with the expected name and parsed arguments.",
+  "summary": "Single auto tool call",
+  "messages": [
+    { "role": "user", "parts": [{ "kind": "text", "text": "What is the weather in Paris?" }] }
+  ],
+  "tools": [
+    {
+      "name": "get_weather",
+      "description": "Return the current weather for a city.",
+      "parameters": {
+        "type": "object",
+        "required": ["city"],
+        "properties": { "city": { "type": "string" } },
+        "additionalProperties": false
+      }
+    }
+  ],
+  "requirements": {
+    "live_required": true,
+    "supports_mock_mode": false,
+    "capabilities": ["generation", "tools"]
+  },
+  "execution": { "temperature": 0, "max_output_tokens": 128, "timeout_ms": 30000, "stream": false, "max_attempts": 1, "tool_choice": "auto" },
+  "expected_invariants": { "expected_tool_name": "get_weather", "expected_tool_arguments": { "city": "Paris" }, "tool_call_count": 1 },
+  "allowed_outcomes": ["PASS", "PASS_WITH_EXTENSION"],
+  "evidence_requirements": {
+    "raw": ["raw_response", "raw_tool_arguments"],
+    "normalized": ["tool_call_started", "tool_call_completed"]
+  }
+}
