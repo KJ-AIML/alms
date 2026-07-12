@@ -36,6 +36,12 @@ def test_dry_run_is_default_and_writes_valid_manifest(corpus_root) -> None:
     assert (summary.run_dir / "plan.json").is_file()
 
 
+def test_same_run_id_does_not_overwrite_evidence(corpus_root) -> None:
+    _run(corpus_root)  # first run writes the immutable manifest
+    with pytest.raises(FileExistsError):
+        _run(corpus_root)  # same run id must be refused, not overwritten
+
+
 def test_live_without_confirm_is_refused(corpus_root) -> None:
     with pytest.raises(RunError):
         _run(corpus_root, live=True, confirm_live=False)

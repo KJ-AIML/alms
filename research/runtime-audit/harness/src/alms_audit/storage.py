@@ -82,5 +82,11 @@ def write_run_manifest(run_dir: Path, manifest: dict, root: Path | None = None) 
     if errors:
         raise ValueError(f"run manifest failed schema validation: {'; '.join(errors)}")
     path = run_dir / "run-manifest.json"
+    # The run manifest is immutable (DevSpec Section 35). Refuse to overwrite an existing
+    # run's evidence: a rerun must use a fresh run id.
+    if path.exists():
+        raise FileExistsError(
+            f"run manifest already exists (immutable, refusing overwrite): {path}"
+        )
     write_json_atomic(path, manifest)
     return path

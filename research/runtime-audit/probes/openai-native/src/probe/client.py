@@ -12,10 +12,15 @@ from typing import Any
 
 
 def build_live_client(api_key: str, timeout_ms: int):
-    """Construct a real OpenAI client. Import is local so the module loads without a key."""
+    """Construct a real OpenAI client. Import is local so the module loads without a key.
+
+    max_retries=0 disables the SDK's default auto-retries (which is 2). The audit must
+    observe true single-attempt behavior; hidden SDK retries would corrupt retry/attempt
+    evidence and could add unplanned cost (DevSpec Sections 64 and 80).
+    """
     import openai
 
-    return openai.OpenAI(api_key=api_key, timeout=max(timeout_ms, 1) / 1000.0)
+    return openai.OpenAI(api_key=api_key, timeout=max(timeout_ms, 1) / 1000.0, max_retries=0)
 
 
 class FakeOpenAIError(Exception):
