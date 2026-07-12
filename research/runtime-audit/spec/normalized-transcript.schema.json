@@ -32,7 +32,8 @@
               "response_completed",
               "cancelled",
               "error",
-              "provider_extension"
+              "provider_extension",
+              "framework_extension"
             ]
           },
           "timestamp_relative_ms": { "type": "number", "minimum": 0 },

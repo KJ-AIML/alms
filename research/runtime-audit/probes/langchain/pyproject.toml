@@ -1,0 +1,32 @@
+[project]
+name = "langchain-probe"
+version = "0.0.0"
+description = "ALMS Phase 0 audit probe: LangChain compatibility lane over OpenAI. Research infrastructure only."
+requires-python = ">=3.13"
+# Isolation (DevSpec Sections 20 and 25): LangChain lives ONLY in this probe env. The central
+# harness must never depend on LangChain. langchain-openai pulls langchain-core and the openai
+# SDK transitively; the transitive openai version matches the openai-native probe, so this is a
+# same-provider/same-SDK control lane (the framework layer is the only deliberate difference).
+dependencies = [
+    "langchain-openai==1.3.5",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/probe"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+# Anchor rootdir here so the probe never inherits another project's pytest config.
+testpaths = ["tests"]

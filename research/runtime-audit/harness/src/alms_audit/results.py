@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 
-from .normalizers import openai as nz
+from .normalizers import openai as _default_normalizer
 from .pricing import PricingSnapshot
 from .schemas import validation_errors
 
@@ -24,22 +24,6 @@ class Interpretation:
     normalized: dict | None  # None when normalization failed / raw was missing
     result: dict
     notes: list[str]
-
-
-def _extract_usage(capture_kind: str, raw_obj: object) -> dict | None:
-    """Provider-reported usage, or None when the provider did not report any.
-
-    None (absent) is preserved distinctly; it is never coerced to zero.
-    """
-    if capture_kind == "response" and isinstance(raw_obj, dict):
-        return raw_obj.get("usage")
-    if capture_kind == "stream" and isinstance(raw_obj, list):
-        for ev in raw_obj:
-            data = ev.get("data") if isinstance(ev, dict) else None
-            if isinstance(ev, dict) and ev.get("type") == "response.completed":
-                resp = (data or {}).get("response", {}) if isinstance(data, dict) else {}
-                return resp.get("usage")
-    return None
 
 
 def _usage_block(usage: dict | None, pricing: PricingSnapshot | None) -> dict:
@@ -82,23 +66,18 @@ def _usage_block(usage: dict | None, pricing: PricingSnapshot | None) -> dict:
     }
 
 
-def _normalize(capture_kind: str, raw_obj: object, raw_manifest_ref: str, response_ref: str):
-    if capture_kind == "stream":
-        return nz.normalize_stream(raw_obj, raw_manifest_ref, response_ref)
-    if capture_kind == "error":
-        return nz.normalize_error(raw_obj, raw_manifest_ref, response_ref)
-    return nz.normalize_response(raw_obj, raw_manifest_ref, response_ref)
-
-
 def _derive_status(capture_kind: str, normalized: dict) -> tuple[str, list[str]]:
     if capture_kind == "error":
         return "ERROR_RUNTIME", ["provider_error"]
     types = {e["type"] for e in normalized.get("events", [])}
+    # A refusal, an unknown native event, or a framework transformation: the run completed but
+    # produced provider- or framework-specific behavior rather than the plain expected output.
+    # Kept distinct from PASS. provider_extension and framework_extension are NOT conflated.
     if "provider_extension" in types:
-        # A refusal or an unknown native event: the run completed but produced provider-
-        # specific behavior rather than the plain expected output. Kept distinct from PASS.
         notes = ["provider_refusal"] if _has_refusal(normalized) else ["provider_extension"]
         return "PASS_WITH_EXTENSION", notes
+    if "framework_extension" in types:
+        return "PASS_WITH_EXTENSION", ["framework_extension"]
     return "PASS", []
 
 
@@ -144,12 +123,19 @@ def interpret(
     normalized_ref: str,
     pricing: PricingSnapshot | None,
     root,
+    normalizer=None,
 ) -> Interpretation:
-    """Normalize one fixture's raw evidence and build its schema-valid result record."""
-    usage = _usage_block(_extract_usage(capture_kind, raw_obj), pricing)
+    """Normalize one fixture's raw evidence and build its schema-valid result record.
+
+    `normalizer` is the runtime-specific normalizer module (defaults to the OpenAI one for
+    backward compatibility); it owns both usage extraction and event normalization for its
+    raw shape.
+    """
+    nz = normalizer or _default_normalizer
+    usage = _usage_block(nz.extract_usage(capture_kind, raw_obj), pricing)
 
     try:
-        normalized = _normalize(capture_kind, raw_obj, raw_manifest_ref, response_ref)
+        normalized = nz.normalize(capture_kind, raw_obj, raw_manifest_ref, response_ref)
         errors = validation_errors("normalized-transcript", normalized, root)
         if errors:
             raise ValueError("; ".join(errors))

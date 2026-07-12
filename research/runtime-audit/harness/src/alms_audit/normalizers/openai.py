@@ -147,3 +147,25 @@ def _evt(seq: int, etype: str, data: dict, raw_ref: str) -> dict:
 
 def _looks_json(text: str | None) -> bool:
     return bool(text) and text.strip().startswith("{")
+
+
+def extract_usage(capture_kind: str, raw_obj: object) -> dict | None:
+    """Provider-reported usage, or None when the provider did not report any (never 0)."""
+    if capture_kind == "response" and isinstance(raw_obj, dict):
+        return raw_obj.get("usage")
+    if capture_kind == "stream" and isinstance(raw_obj, list):
+        for ev in raw_obj:
+            data = ev.get("data") if isinstance(ev, dict) else None
+            if isinstance(ev, dict) and ev.get("type") == "response.completed":
+                resp = (data or {}).get("response", {}) if isinstance(data, dict) else {}
+                return resp.get("usage")
+    return None
+
+
+def normalize(capture_kind: str, raw_obj: object, raw_manifest: str, response_ref: str) -> dict:
+    """Dispatch raw OpenAI evidence to the right normalizer branch by capture kind."""
+    if capture_kind == "stream":
+        return normalize_stream(raw_obj, raw_manifest, response_ref)
+    if capture_kind == "error":
+        return normalize_error(raw_obj, raw_manifest, response_ref)
+    return normalize_response(raw_obj, raw_manifest, response_ref)

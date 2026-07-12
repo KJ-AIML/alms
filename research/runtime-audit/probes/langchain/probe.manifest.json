@@ -1,0 +1,34 @@
+{
+  "audit_protocol_version": "alms.dev/probe-protocol/v0",
+  "probe_id": "langchain",
+  "runtime_layer": "langchain",
+  "runtime_packages": ["langchain-openai==1.3.5", "langchain-core==1.4.9"],
+  "api_surface": "langchain_openai.ChatOpenAI: invoke / stream / bind_tools / with_structured_output",
+  "sdk_version": "langchain-openai 1.3.5 (langchain-core 1.4.9; transitive openai 2.45.0)",
+  "credential_env_vars": ["OPENAI_API_KEY"],
+  "configuration_keys": ["model", "timeout_ms", "max_output_tokens", "mock_mode"],
+  "claimed_feature_support": {
+    "note": "LangChain framework operations implemented in this probe. A framework operation succeeding OFFLINE says nothing about live provider semantics or model support; both remain UNVERIFIED until a live run (DevSpec Section 55). Framework behavior (message conversion, structured-output strategy, tool binding, streaming aggregation, usage propagation, exception wrapping) is the audit subject, not a capability claim.",
+    "generation": "framework_operation_implemented (ChatOpenAI.invoke)",
+    "roles": "framework_operation_implemented (SystemMessage/HumanMessage conversion)",
+    "structured_output": "framework_operation_implemented (with_structured_output; strategy recorded in raw evidence)",
+    "tools": "framework_operation_implemented (bind_tools; AIMessage.tool_calls / invalid_tool_calls captured)",
+    "streaming": "framework_operation_implemented (ChatOpenAI.stream; AIMessageChunk sequence captured)",
+    "usage": "framework_operation_implemented (AIMessage.usage_metadata captured; absent stays absent)",
+    "errors": "framework_operation_implemented (framework exception type + underlying cause chain captured)"
+  },
+  "model_support_status": "unverified_until_live",
+  "supported_modes": ["offline_mock", "live"],
+  "framework_boundary_notes": [
+    "LangChain may transform provider-native events into framework chunk/message objects; native OpenAI Responses event names are NOT guaranteed to survive the boundary. The distinction is recorded as evidence, never assumed equivalent.",
+    "usage_metadata is LangChain's normalized shape; it is not byte-identical to the provider's raw usage block. Missing usage stays absent, never coerced to zero.",
+    "with_structured_output selects a strategy (function/tool calling, json_schema, or a parser); the selected strategy is preserved in raw evidence rather than assumed to be provider-native strict mode."
+  ],
+  "known_limitations": [
+    "No live evidence exists yet; all P0.5 verification is offline via a narrow injected fake chat model that exercises real LangChain machinery without the network.",
+    "Parallel tools, cancellation, timeout, retry, embeddings, and multimodal are out of P0.5 scope.",
+    "The probe emits raw evidence and a minimal manifest only; normalization is a harness stage.",
+    "No OpenRouter, gateway, or custom base_url is configured; only a direct OPENAI_API_KEY satisfies the live credential gate."
+  ],
+  "run_command": "uv run --project probes/langchain python -m probe <request.json>"
+}

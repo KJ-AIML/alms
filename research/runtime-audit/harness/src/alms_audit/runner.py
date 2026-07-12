@@ -34,6 +34,7 @@ from .environment import (
     sha256_file,
 )
 from .fixtures import Fixture
+from .normalizers import select as select_normalizer
 from .planner import LivePlan, Plan, build_live_plan, build_plan
 from .pricing import PricingSnapshot, gate_cost
 from .protocol import build_probe_request
@@ -49,6 +50,15 @@ from .storage import (
 from .subprocess_runner import run_probe
 
 BLOCK_NETWORK_ENV = "ALMS_PROBE_BLOCK_NETWORK"
+
+# Each lane's runtime layer maps to the isolated probe project that owns that runtime's SDK.
+# A lane never launches another lane's probe env (DevSpec Sections 20, 25, 29).
+_PROBE_BY_RUNTIME = {"openai": "openai-native", "langchain": "langchain"}
+
+
+def _probe_id_for_lane(lane: dict) -> str:
+    runtime = lane.get("runtime_layer", "")
+    return _PROBE_BY_RUNTIME.get(runtime, runtime or "openai-native")
 
 
 class RunError(RuntimeError):
@@ -195,7 +205,8 @@ def _run_execution(
                 f"live run refused: credential {env_var} is not present (presence-only check)"
             )
 
-    probe_dir = probe_dir or root / "probes" / "openai-native"
+    probe_id = _probe_id_for_lane(selected_lane)
+    probe_dir = probe_dir or root / "probes" / probe_id
     probe_python = _probe_python(probe_dir)
     # Invoke the probe's OWN locked interpreter directly (not a nested `uv run`, which can
     # hang when launched from inside the harness's own `uv run`). The probe env is the only
@@ -273,9 +284,7 @@ def _run_execution(
         config=config,
         command_line=command_line,
         started=started,
-        probe_lock_hashes={"openai-native": sha256_file(probe_lock)}
-        if probe_lock.is_file()
-        else {},
+        probe_lock_hashes={probe_id: sha256_file(probe_lock)} if probe_lock.is_file() else {},
     )
 
     summary = {
@@ -429,6 +438,7 @@ def _execute_one(
         normalized_ref=str(normalized_path),
         pricing=pricing,
         root=root,
+        normalizer=select_normalizer(lane.get("runtime_layer")),
     )
     if interp.normalized is not None:
         write_json_atomic(normalized_path, interp.normalized)
