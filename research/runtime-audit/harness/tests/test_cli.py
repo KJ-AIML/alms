@@ -8,6 +8,8 @@ from pathlib import Path
 from alms_audit.cli import main
 from alms_audit.schemas import default_root
 
+_OVERRIDE = "configs/first-live.override.toml"
+
 
 def test_validate_passes_on_committed_corpus() -> None:
     assert main(["validate"]) == 0
@@ -54,6 +56,114 @@ def test_run_dry_run_default(corpus_root: Path, capsys) -> None:
 def test_run_live_without_confirm_is_refused(corpus_root: Path, capsys) -> None:
     assert main(["run", "--root", str(corpus_root), "--live"]) == 2
     assert "REFUSED" in capsys.readouterr().out
+
+
+def _cfg(corpus_root: Path) -> str:
+    return str(corpus_root / _OVERRIDE)
+
+
+def test_run_execute_missing_config_refused(corpus_root: Path, capsys) -> None:
+    assert (
+        main(
+            [
+                "run",
+                "--root",
+                str(corpus_root),
+                "--offline-execute",
+                "--lane",
+                "openai-native",
+                "--model",
+                "gpt-5.4-nano",
+                "--fixtures",
+                "GEN-001",
+            ]
+        )
+        == 2
+    )
+    assert "missing configuration" in capsys.readouterr().out
+
+
+def test_run_unknown_config_path_refused(corpus_root: Path, capsys) -> None:
+    assert (
+        main(
+            [
+                "run",
+                "--root",
+                str(corpus_root),
+                "--offline-execute",
+                "--config",
+                str(corpus_root / "nope.toml"),
+                "--lane",
+                "openai-native",
+                "--model",
+                "gpt-5.4-nano",
+                "--fixtures",
+                "GEN-001",
+            ]
+        )
+        == 2
+    )
+    assert "unknown configuration path" in capsys.readouterr().out
+
+
+def test_run_unapproved_fixture_refused_before_launch(corpus_root: Path, capsys) -> None:
+    # Selection fails before any subprocess, so this is fast and creates no evidence.
+    assert (
+        main(
+            [
+                "run",
+                "--root",
+                str(corpus_root),
+                "--offline-execute",
+                "--config",
+                _cfg(corpus_root),
+                "--lane",
+                "openai-native",
+                "--model",
+                "gpt-5.4-nano",
+                "--fixtures",
+                "GEN-001,ERROR-001",
+            ]
+        )
+        == 2
+    )
+    assert "approved first-live" in capsys.readouterr().out
+    assert not (corpus_root / "runs").exists()
+
+
+def test_run_offline_execute_full_pipeline_via_cli(capsys) -> None:
+    """Drives the real subprocess against the real probe env; cleans up its run dir."""
+    root = default_root()
+    run_id = "cli-wire-test-001"
+    run_dir = root / "runs" / run_id
+    if run_dir.exists():
+        shutil.rmtree(run_dir)
+    try:
+        code = main(
+            [
+                "run",
+                "--config",
+                str(root / _OVERRIDE),
+                "--lane",
+                "openai-native",
+                "--model",
+                "gpt-5.4-nano",
+                "--offline-execute",
+                "--run-id",
+                run_id,
+                "--fixtures",
+                "GEN-001,ROLE-001,STR-001,TOOL-001,STREAM-001,USAGE-001",
+            ]
+        )
+        out = capsys.readouterr().out
+        assert code == 0
+        assert "mode: offline" in out
+        for fx in ("GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001", "USAGE-001"):
+            assert f"fixture {fx}:" in out
+        assert (run_dir / "run-summary.json").is_file()
+    finally:
+        if run_dir.exists():
+            shutil.rmtree(run_dir)
 
 
 def test_validate_fails_on_bad_fixture(tmp_path: Path, capsys) -> None:

@@ -15,12 +15,20 @@ from pathlib import Path
 
 from . import __version__, runner
 from .budget import BudgetError
-from .config import load_config
-from .environment import credential_presence
+from .config import approved_fixtures, load_config, load_config_path, load_raw
+from .environment import credential_presence, sha256_file
 from .fixtures import duplicate_ids, load_fixtures
 from .lanes import load_lanes
 from .planner import build_plan
+from .pricing import CostError, load_snapshots
 from .schemas import SCHEMA_FILES, spec_dir, validation_errors, validator_for
+from .selection import (
+    SelectionError,
+    parse_fixture_ids,
+    resolve_model,
+    select_fixtures,
+    select_lane,
+)
 
 
 def _add_root(p: argparse.ArgumentParser) -> None:
@@ -132,29 +140,70 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 def cmd_run(args: argparse.Namespace) -> int:
     root: Path | None = args.root
-    config = load_config(root)
-    fixtures = load_fixtures(root)
     lanes = load_lanes(root)
+    all_fixtures = load_fixtures(root)
     run_id = args.run_id or datetime.now(timezone.utc).strftime("run-%Y%m%dT%H%M%SZ")
+    command_line = "alms-audit " + " ".join(sys.argv[1:])
+
+    execute = bool(args.live or args.offline_execute)
+    kwargs: dict = {}
+
     try:
+        if execute and not args.config:
+            raise runner.RunError("missing configuration: an execution run requires --config")
+        if args.config:
+            config_path = Path(args.config)
+            if not config_path.is_file():
+                raise runner.RunError(f"unknown configuration path: {config_path}")
+            config = load_config_path(config_path)
+            raw = load_raw(config_path)
+        else:
+            config = load_config(root)
+            config_path = None
+            raw = {}
+
+        if execute:
+            # Bounded single-lane execution: explicit lane + model + fixture subset required.
+            lane = resolve_model(select_lane(lanes, args.lane), args.model)
+            ids = parse_fixture_ids(args.fixtures or "")
+            selected = select_fixtures(
+                all_fixtures, ids, lane=lane, approved_fixtures=approved_fixtures(raw)
+            )
+            pricing = load_snapshots(raw).get(args.model) if args.model else None
+            kwargs = {
+                "fixtures": selected,
+                "selected_lane": lane,
+                "model": args.model,
+                "pricing": pricing,
+                "offline_execute": args.offline_execute,
+                "config_digest": sha256_file(config_path) if config_path else None,
+            }
+        else:
+            kwargs = {"fixtures": all_fixtures}
+
         summary = runner.run(
             run_id=run_id,
-            fixtures=fixtures,
             lanes=lanes,
             config=config,
             live=args.live,
             confirm_live=args.confirm_live,
-            command_line="alms-audit " + " ".join(sys.argv[1:]),
+            command_line=command_line,
             root=root,
+            **kwargs,
         )
-    except (runner.RunError, BudgetError) as exc:
+    except (runner.RunError, BudgetError, CostError, SelectionError) as exc:
         print(f"REFUSED: {exc}")
         return 2
+
     print(f"mode: {summary.mode}")
     print(f"run_id: {summary.run_id}")
     print(f"run_dir: {summary.run_dir}")
-    print(f"expected live call count: {summary.plan.expected_call_count}")
+    print(f"expected live call count: {summary.expected_call_count}")
     print(f"manifest: {summary.manifest_path}")
+    for e in summary.entries:
+        print(f"  fixture {e['fixture_id']}: {e['status']}")
+    if summary.summary_path:
+        print(f"run summary: {summary.summary_path}")
     return 0
 
 
@@ -184,9 +233,20 @@ def build_parser() -> argparse.ArgumentParser:
     _add_root(run_p)
     run_p.add_argument("--run-id", default=None)
     run_p.add_argument(
+        "--config", default=None, help="explicit config file (e.g. a first-live override)"
+    )
+    run_p.add_argument("--lane", default=None, help="single lane id to execute")
+    run_p.add_argument("--model", default=None, help="explicit provider model id")
+    run_p.add_argument("--fixtures", default=None, help="comma-separated fixture ids, in order")
+    run_p.add_argument(
+        "--offline-execute",
+        action="store_true",
+        help="run the full pipeline through the probe in mock mode (no network, no credential)",
+    )
+    run_p.add_argument(
         "--live",
         action="store_true",
-        help="attempt a live run (still needs --confirm-live + budget)",
+        help="attempt a live run (still needs --confirm-live + budget + credential)",
     )
     run_p.add_argument(
         "--confirm-live", action="store_true", help="explicit confirmation for a live run"

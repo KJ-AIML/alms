@@ -8,9 +8,18 @@ from __future__ import annotations
 import hashlib
 import os
 import platform
+import re
 import subprocess
 import sys
 from pathlib import Path
+
+# Credential-shaped strings that must never appear in committed/evidence artifacts. Detecting
+# by SHAPE means the harness never has to read a real credential value to scan for leaks
+# (credential state stays presence-only outside the probe child).
+_SECRET_PATTERNS = (
+    re.compile(r"sk-[A-Za-z0-9_\-]{16,}"),
+    re.compile(r"(?i)bearer\s+[A-Za-z0-9._\-]{12,}"),
+)
 
 PROVIDER_ENV = {
     "openai": "OPENAI_API_KEY",
@@ -65,6 +74,52 @@ def uv_version() -> str:
 
 def git_sha(repo: Path) -> str:
     return _run(["git", "rev-parse", "HEAD"], cwd=repo)
+
+
+def scan_for_secrets(directory: Path, secret_values: set[str]) -> list[str]:
+    """Scan every file under `directory` for any secret value. Returns "path: hit" strings.
+
+    A non-empty result is a HARD safety failure (DevSpec Section 83): the credential value
+    must never appear in any evidence artifact. Empty/blank secret values are ignored so a
+    run with no configured secret cannot trivially "pass" on an empty needle.
+    """
+    needles = {s for s in secret_values if s and s.strip()}
+    hits: list[str] = []
+    if not needles or not directory.is_dir():
+        return hits
+    for path in sorted(directory.rglob("*")):
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        for needle in needles:
+            if needle in text:
+                hits.append(f"{path}: secret value present")
+                break
+    return hits
+
+
+def scan_for_secret_shapes(directory: Path) -> list[str]:
+    """Scan every file under `directory` for credential-SHAPED strings (no value needed).
+
+    A non-empty result is a hard safety failure. This complements the probe's own redaction
+    and lets the harness detect a leaked key without ever reading a real credential value.
+    """
+    hits: list[str] = []
+    if not directory.is_dir():
+        return hits
+    for path in sorted(directory.rglob("*")):
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        if any(pat.search(text) for pat in _SECRET_PATTERNS):
+            hits.append(f"{path}: credential-shaped string present")
+    return hits
 
 
 def os_string() -> str:

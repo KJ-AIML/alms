@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import sys
 from datetime import datetime, timezone
 from importlib.metadata import version
@@ -25,7 +26,27 @@ EXIT_OK = 0
 EXIT_INVALID = 2
 EXIT_BLOCKED = 3
 
+BLOCK_NETWORK_ENV = "ALMS_PROBE_BLOCK_NETWORK"
+
 REQUIRED_KEYS = ("protocol_version", "run_id", "fixture_path", "lane", "output_dir", "controls")
+
+
+def _install_network_tripwire() -> None:
+    """Hard-block outbound sockets when ALMS_PROBE_BLOCK_NETWORK=1.
+
+    The harness sets this for offline (mock) runs so a probe that accidentally tries to
+    reach the network fails loudly instead of silently making a request. This does NOT
+    rely on the absence of a credential; it is an independent process-level guard.
+    """
+
+    def _blocked(self, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+        raise RuntimeError(
+            "network blocked: ALMS_PROBE_BLOCK_NETWORK is set (offline mock run must not "
+            "open a socket)"
+        )
+
+    socket.socket.connect = _blocked  # type: ignore[method-assign]
+    socket.socket.connect_ex = _blocked  # type: ignore[method-assign]
 
 
 def _fail(msg: str, code: int) -> int:
@@ -74,6 +95,7 @@ def run(request: dict) -> tuple[int, dict | None]:
     controls = request["controls"]
     model = lane.get("model")
     mock_mode = bool(controls.get("mock_mode"))
+    execution_mode = "offline_mock" if mock_mode else "live"
     started_at = datetime.now(timezone.utc).isoformat()
 
     if mock_mode:
@@ -104,12 +126,15 @@ def run(request: dict) -> tuple[int, dict | None]:
         openai_version=version("openai"),
         started_at=started_at,
         redaction_mode=request.get("redaction_mode", "strict"),
+        execution_mode=execution_mode,
         secret_values={v for v in [os.environ.get("OPENAI_API_KEY")] if v},
     )
     return EXIT_OK, manifest
 
 
 def main(argv: list[str] | None = None) -> int:
+    if os.environ.get(BLOCK_NETWORK_ENV) == "1":
+        _install_network_tripwire()
     argv = sys.argv[1:] if argv is None else argv
     if not argv:
         return _fail("usage: python -m probe <request.json>", EXIT_INVALID)

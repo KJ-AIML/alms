@@ -45,6 +45,17 @@
         "mode": { "type": "string", "enum": ["strict", "minimal"] },
         "fields_redacted": { "type": "array", "items": { "type": "string" } }
       }
+    },
+    "capture_kind": {
+      "type": "string",
+      "enum": ["response", "stream", "error"],
+      "$comment": "Which native shape was captured; selects the harness normalizer branch."
+    },
+    "duration_ms": { "type": "integer", "minimum": 0 },
+    "execution_mode": {
+      "type": "string",
+      "enum": ["offline_mock", "live"],
+      "$comment": "offline_mock evidence is a mock simulation and must NEVER be labelled live evidence."
     }
   }
 }

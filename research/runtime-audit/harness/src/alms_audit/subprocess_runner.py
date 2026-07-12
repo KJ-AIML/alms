@@ -31,6 +31,7 @@ def run_probe(
     timeout_ms: int,
     capture_dir: Path,
     cwd: Path | None = None,
+    env: dict[str, str] | None = None,
 ) -> RawResult:
     capture_dir.mkdir(parents=True, exist_ok=True)
     stdout_path = capture_dir / "stdout.txt"
@@ -42,6 +43,7 @@ def run_probe(
         proc = subprocess.run(
             command,
             cwd=cwd,
+            env=env,
             capture_output=True,
             text=True,
             timeout=max(timeout_ms, 1) / 1000.0,

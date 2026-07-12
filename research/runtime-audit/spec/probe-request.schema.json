@@ -29,6 +29,7 @@
       "properties": {
         "timeout_ms": { "type": "integer", "minimum": 1 },
         "max_attempts": { "type": "integer", "minimum": 1 },
+        "max_output_tokens": { "type": "integer", "minimum": 1 },
         "cancel_after_ms": { "type": "integer", "minimum": 1 },
         "stream": { "type": "boolean" },
         "mock_mode": { "type": "boolean" }

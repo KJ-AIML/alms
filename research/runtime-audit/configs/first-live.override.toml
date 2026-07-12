@@ -13,3 +13,23 @@ max_live_calls = 8       # first-live hard ceiling on provider calls
 max_output_tokens = 128
 default_timeout_ms = 30000
 retries = 0              # no automatic audit retries; the SDK client also sets max_retries=0
+
+# The only fixtures eligible for the FIRST live acceptance run. Enforced by the selection
+# layer for this override config only; the generic corpus is unrestricted. Adding an
+# unapproved fixture to a first-live run is refused before any provider call.
+[live_acceptance]
+approved_fixtures = ["GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001", "USAGE-001"]
+
+# Committed, non-secret pricing snapshot for the selected low-cost OpenAI model. Prices are
+# strings so budget arithmetic stays exact Decimal, never binary float. Never fetched at
+# runtime and never silently updated; recorded by digest in each run manifest. The estimate
+# it feeds is a safety upper bound, not an accounting claim. price_checked_at 2026-07-13.
+[[pricing]]
+model_id = "gpt-5.4-nano"
+price_checked_at = "2026-07-13"
+input_price_per_million = "0.20"      # USD per 1M input tokens
+output_price_per_million = "1.25"     # USD per 1M output tokens
+estimated_input_tokens_per_call = 500 # generous upper estimate for the bounded fixtures
+maximum_output_tokens_per_call = 128  # equals [execution].max_output_tokens
+maximum_calls = 8                     # equals [budget].max_live_calls
+pricing_source_note = "cheapest GPT-5.4-class model; OpenAI pricing page + GPT-5 developer announcement, checked 2026-07-13"

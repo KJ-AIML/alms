@@ -16,12 +16,15 @@ def build_probe_request(
     output_dir: str,
     timeout_ms: int,
     max_attempts: int,
+    max_output_tokens: int | None = None,
     redaction_mode: str = "strict",
     stream: bool = False,
     mock_mode: bool = False,
 ) -> dict:
     """Assemble a probe-request conforming to spec/probe-request.schema.json."""
     controls: dict = {"timeout_ms": timeout_ms, "max_attempts": max_attempts, "stream": stream}
+    if max_output_tokens is not None:
+        controls["max_output_tokens"] = max_output_tokens
     if mock_mode:
         controls["mock_mode"] = True
     return {

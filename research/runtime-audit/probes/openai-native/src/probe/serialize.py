@@ -44,6 +44,7 @@ def write_capture(
     openai_version: str,
     started_at: str,
     redaction_mode: str,
+    execution_mode: str = "live",
     secret_values: set[str] | None = None,
 ) -> dict:
     raw = out_dir / "raw"
@@ -99,5 +100,6 @@ def write_capture(
         "redaction_summary": {"mode": redaction_mode, "fields_redacted": sorted(fields_redacted)},
         "capture_kind": capture.kind,
         "duration_ms": capture.duration_ms,
+        "execution_mode": execution_mode,
     }
     return manifest
