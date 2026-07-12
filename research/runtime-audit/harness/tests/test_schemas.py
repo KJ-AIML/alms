@@ -15,7 +15,12 @@ VALID_PROBE_REQUEST = {
     "protocol_version": "alms.dev/probe-protocol/v0",
     "run_id": "r1",
     "fixture_path": "fixtures/generation/generation-basic-001.json",
-    "lane": {"lane_id": "openai-native", "runtime_layer": "openai", "provider": "openai", "model": "m"},
+    "lane": {
+        "lane_id": "openai-native",
+        "runtime_layer": "openai",
+        "provider": "openai",
+        "model": "m",
+    },
     "output_dir": "runs/r1",
     "controls": {"timeout_ms": 30000, "max_attempts": 1},
     "redaction_mode": "strict",
@@ -107,12 +112,14 @@ VALID_RUN_MANIFEST = {
 
 # ---- schema well-formedness -------------------------------------------------
 
+
 @pytest.mark.parametrize("name", sorted(SCHEMA_FILES))
 def test_schema_file_is_valid_json_schema(name: str) -> None:
     validator_for(name)  # constructs after Draft202012Validator.check_schema
 
 
 # ---- fixtures: positive + negative ------------------------------------------
+
 
 def test_example_fixtures_all_validate() -> None:
     loaded = fx.load_fixtures()
@@ -141,6 +148,7 @@ def test_fixture_requires_messages_or_embedding_inputs() -> None:
 
 # ---- required-property invariants -------------------------------------------
 
+
 def test_probe_request_and_response_valid() -> None:
     assert is_valid("probe-request", VALID_PROBE_REQUEST)
     assert is_valid("probe-response", VALID_PROBE_RESPONSE)
@@ -152,7 +160,9 @@ def test_transcript_event_requires_raw_ref() -> None:
     broken = {
         "spec": "alms.dev/normalized-transcript/v0",
         "raw_manifest": "runs/r1/raw-manifest.json",
-        "events": [{"sequence": 0, "type": "response_started", "timestamp_relative_ms": 0, "data": {}}],
+        "events": [
+            {"sequence": 0, "type": "response_started", "timestamp_relative_ms": 0, "data": {}}
+        ],
     }
     assert validation_errors("normalized-transcript", broken)
 
@@ -190,6 +200,7 @@ def test_run_manifest_rejects_unknown_field() -> None:
 
 # ---- isolation --------------------------------------------------------------
 
+
 def _is_installed(module: str) -> bool:
     # find_spec raises ModuleNotFoundError for "a.b" when parent "a" is absent.
     try:
@@ -200,7 +211,16 @@ def _is_installed(module: str) -> bool:
 
 @pytest.mark.parametrize(
     "module",
-    ["openai", "anthropic", "langchain", "litellm", "google.generativeai", "google.genai", "pydantic_ai", "mirascope"],
+    [
+        "openai",
+        "anthropic",
+        "langchain",
+        "litellm",
+        "google.generativeai",
+        "google.genai",
+        "pydantic_ai",
+        "mirascope",
+    ],
 )
 def test_no_runtime_sdk_dependency(module: str) -> None:
     """DevSpec Section 20 and Section 25: the harness env must not carry any runtime SDK."""

@@ -1,17 +1,25 @@
 """alms-audit — internal research CLI for the Phase 0 Runtime Audit Lab.
 
-Read-only in P0.1: it validates schemas + fixtures and lists fixtures/lanes.
-It performs NO live calls and is NOT part of the public `alms` CLI.
+Commands: validate, list-fixtures, list-lanes, plan, run. Through P0.2 every command is
+offline: `run` is dry-run by default and a live run is refused without both --live and
+--confirm-live plus a valid budget. It performs NO live calls and is NOT part of the
+public `alms` CLI.
 """
 
 from __future__ import annotations
 
 import argparse
+import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__
+from . import __version__, runner
+from .budget import BudgetError
+from .config import load_config
+from .environment import credential_presence
 from .fixtures import load_fixtures
 from .lanes import load_lanes
+from .planner import build_plan
 from .schemas import SCHEMA_FILES, spec_dir, validation_errors, validator_for
 
 
@@ -78,7 +86,65 @@ def cmd_list_lanes(args: argparse.Namespace) -> int:
         print("(no lanes configured)")
         return 0
     for lane in lanes:
-        print(f"{lane.get('lane_id', '?')}\t{lane.get('runtime_layer', '?')}\t{lane.get('provider', '?')}")
+        print(
+            f"{lane.get('lane_id', '?')}\t{lane.get('runtime_layer', '?')}\t{lane.get('provider', '?')}"
+        )
+    return 0
+
+
+def cmd_plan(args: argparse.Namespace) -> int:
+    root: Path | None = args.root
+    config = load_config(root)
+    fixtures = load_fixtures(root)
+    lanes = load_lanes(root)
+    providers = sorted({ln.get("provider", "?") for ln in lanes})
+    creds = credential_presence(providers)
+    # live=True so the preview reveals what a live run would skip (no calls are made).
+    plan = build_plan(fixtures, lanes, live=True, credentials=creds)
+
+    print(f"selected fixtures ({len(fixtures)}): {', '.join(f.id for f in fixtures) or '(none)'}")
+    print(
+        f"selected lanes ({len(lanes)}): {', '.join(ln.get('lane_id', '?') for ln in lanes) or '(none)'}"
+    )
+    print(f"expected live call count: {plan.expected_call_count}")
+    print(f"skipped cases: {len(plan.skipped)}")
+    for e in plan.skipped:
+        print(f"  skip {e.fixture_id} x {e.lane_id}: {e.skip_reason}")
+    missing = sorted(var for var, present in creds.items() if not present)
+    print(f"missing credentials: {', '.join(missing) or '(none)'}")
+    print("configured models: (supplied at run time; recorded in run manifest)")
+    print(f"hard budget (USD): {config.hard_cap_usd}")
+    print(f"max output tokens: {config.max_output_tokens}")
+    print(f"default timeout (ms): {config.default_timeout_ms}")
+    print("(no live calls were made by plan)")
+    return 0
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    root: Path | None = args.root
+    config = load_config(root)
+    fixtures = load_fixtures(root)
+    lanes = load_lanes(root)
+    run_id = args.run_id or datetime.now(timezone.utc).strftime("run-%Y%m%dT%H%M%SZ")
+    try:
+        summary = runner.run(
+            run_id=run_id,
+            fixtures=fixtures,
+            lanes=lanes,
+            config=config,
+            live=args.live,
+            confirm_live=args.confirm_live,
+            command_line="alms-audit " + " ".join(sys.argv[1:]),
+            root=root,
+        )
+    except (runner.RunError, BudgetError) as exc:
+        print(f"REFUSED: {exc}")
+        return 2
+    print(f"mode: {summary.mode}")
+    print(f"run_id: {summary.run_id}")
+    print(f"run_dir: {summary.run_dir}")
+    print(f"expected live call count: {summary.plan.expected_call_count}")
+    print(f"manifest: {summary.manifest_path}")
     return 0
 
 
@@ -91,10 +157,24 @@ def build_parser() -> argparse.ArgumentParser:
         ("validate", cmd_validate),
         ("list-fixtures", cmd_list_fixtures),
         ("list-lanes", cmd_list_lanes),
+        ("plan", cmd_plan),
     ):
         p = sub.add_parser(name)
         _add_root(p)
         p.set_defaults(func=func)
+
+    run_p = sub.add_parser("run", help="dry-run by default; live requires --live --confirm-live")
+    _add_root(run_p)
+    run_p.add_argument("--run-id", default=None)
+    run_p.add_argument(
+        "--live",
+        action="store_true",
+        help="attempt a live run (still needs --confirm-live + budget)",
+    )
+    run_p.add_argument(
+        "--confirm-live", action="store_true", help="explicit confirmation for a live run"
+    )
+    run_p.set_defaults(func=cmd_run)
 
     return parser
 

@@ -37,6 +37,25 @@ def test_validate_with_root_path_containing_spaces(tmp_path: Path) -> None:
     assert main(["validate", "--root", str(spaced)]) == 0
 
 
+def test_plan_previews_without_calls(capsys) -> None:
+    assert main(["plan"]) == 0
+    out = capsys.readouterr().out
+    assert "expected live call count" in out
+    assert "no live calls were made" in out
+
+
+def test_run_dry_run_default(corpus_root: Path, capsys) -> None:
+    assert main(["run", "--root", str(corpus_root), "--run-id", "clirun"]) == 0
+    out = capsys.readouterr().out
+    assert "mode: dry-run" in out
+    assert (corpus_root / "runs" / "clirun" / "run-manifest.json").is_file()
+
+
+def test_run_live_without_confirm_is_refused(corpus_root: Path, capsys) -> None:
+    assert main(["run", "--root", str(corpus_root), "--live"]) == 2
+    assert "REFUSED" in capsys.readouterr().out
+
+
 def test_validate_fails_on_bad_fixture(tmp_path: Path, capsys) -> None:
     root = default_root()
     spaced = tmp_path / "broken corpus"

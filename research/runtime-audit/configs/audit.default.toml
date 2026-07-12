@@ -1,0 +1,14 @@
+# Default Phase 0 audit controls (DevSpec Section 80).
+# KJ may change these before execution; the configured values are recorded in each run
+# manifest. The runner fails closed when the hard cap is absent or exceeded.
+# Committed source must not contain assumed permanent provider prices (DevSpec Section 80).
+
+[budget]
+hard_cap_usd = 15.0      # whole-study hard cap; a live run is refused if this is null/0
+soft_cap_usd = 2.0       # per-run soft cap (advisory)
+max_live_calls = 80      # per-run hard ceiling on provider calls
+
+[execution]
+max_output_tokens = 256
+default_timeout_ms = 30000
+retries = 0              # no automatic audit retries except the dedicated retry experiment
