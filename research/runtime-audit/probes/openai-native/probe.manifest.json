@@ -1,0 +1,28 @@
+{
+  "audit_protocol_version": "alms.dev/probe-protocol/v0",
+  "probe_id": "openai-native",
+  "runtime_layer": "openai",
+  "runtime_packages": ["openai==2.45.0"],
+  "api_surface": "responses.create (OpenAI Responses API)",
+  "sdk_version": "2.45.0",
+  "credential_env_vars": ["OPENAI_API_KEY"],
+  "configuration_keys": ["model", "timeout_ms", "max_output_tokens", "mock_mode"],
+  "claimed_feature_support": {
+    "note": "SDK operations implemented in this probe. Model-specific support is UNVERIFIED until a live run produces evidence; the result matrix may contradict these claims (DevSpec Section 55).",
+    "generation": "sdk_operation_implemented",
+    "roles": "sdk_operation_implemented",
+    "structured_output": "sdk_operation_implemented (native_schema via text.format json_schema)",
+    "tools": "sdk_operation_implemented (function tools; call_id/name/arguments captured)",
+    "streaming": "sdk_operation_implemented",
+    "usage": "sdk_operation_implemented",
+    "errors": "sdk_operation_implemented (native exception evidence captured)"
+  },
+  "model_support_status": "unverified_until_live",
+  "supported_modes": ["offline_mock", "live"],
+  "known_limitations": [
+    "No live evidence exists yet; all P0.4 verification is offline via a narrow fake client.",
+    "Parallel tools, cancellation, timeout, retry, embeddings, and multimodal are out of P0.4 scope.",
+    "The probe emits raw evidence and a minimal summary only; normalization is a harness stage."
+  ],
+  "run_command": "uv run --project probes/openai-native python -m probe <request.json>"
+}
