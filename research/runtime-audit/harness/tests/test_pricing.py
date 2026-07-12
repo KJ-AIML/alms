@@ -17,7 +17,7 @@ from alms_audit.pricing import (
 from alms_audit.schemas import default_root
 
 _BASE = {
-    "model_id": "gpt-5.4-nano",
+    "model_id": "gpt-5.4-nano-2026-03-17",
     "price_checked_at": "2026-07-13",
     "input_price_per_million": "0.20",
     "output_price_per_million": "1.25",
@@ -31,7 +31,7 @@ _BASE = {
 def test_first_live_config_has_pricing_snapshot_for_model():
     data = load_raw(default_root() / "configs" / "first-live.override.toml")
     snaps = load_snapshots(data)
-    assert "gpt-5.4-nano" in snaps
+    assert "gpt-5.4-nano-2026-03-17" in snaps
 
 
 def test_upper_bound_cost_is_exact_decimal():
@@ -43,13 +43,13 @@ def test_upper_bound_cost_is_exact_decimal():
 
 def test_gate_passes_within_hard_cap_and_returns_estimate():
     snap = snapshot_from_dict(_BASE)
-    est = gate_cost(snap, model_id="gpt-5.4-nano", expected_calls=6, hard_cap_usd=1.00)
+    est = gate_cost(snap, model_id="gpt-5.4-nano-2026-03-17", expected_calls=6, hard_cap_usd=1.00)
     assert est == Decimal("0.00156")
 
 
 def test_gate_rejects_missing_snapshot():
     with pytest.raises(CostError):
-        gate_cost(None, model_id="gpt-5.4-nano", expected_calls=6, hard_cap_usd=1.00)
+        gate_cost(None, model_id="gpt-5.4-nano-2026-03-17", expected_calls=6, hard_cap_usd=1.00)
 
 
 def test_gate_rejects_model_mismatch():
@@ -62,20 +62,22 @@ def test_gate_rejects_estimate_over_hard_cap():
     snap = snapshot_from_dict(_BASE)
     # A boundary just below the estimate must be refused.
     with pytest.raises(CostError, match="exceeds hard cap"):
-        gate_cost(snap, model_id="gpt-5.4-nano", expected_calls=8, hard_cap_usd=0.002)
+        gate_cost(snap, model_id="gpt-5.4-nano-2026-03-17", expected_calls=8, hard_cap_usd=0.002)
 
 
 def test_gate_boundary_estimate_equal_to_cap_passes():
     snap = snapshot_from_dict(_BASE)
     # estimate for 8 calls == 0.00208; a cap exactly equal must pass (not >).
-    est = gate_cost(snap, model_id="gpt-5.4-nano", expected_calls=8, hard_cap_usd=0.00208)
+    est = gate_cost(
+        snap, model_id="gpt-5.4-nano-2026-03-17", expected_calls=8, hard_cap_usd=0.00208
+    )
     assert est == Decimal("0.00208")
 
 
 def test_gate_rejects_absent_hard_cap():
     snap = snapshot_from_dict(_BASE)
     with pytest.raises(CostError):
-        gate_cost(snap, model_id="gpt-5.4-nano", expected_calls=6, hard_cap_usd=None)
+        gate_cost(snap, model_id="gpt-5.4-nano-2026-03-17", expected_calls=6, hard_cap_usd=None)
 
 
 @pytest.mark.parametrize("field", ["input_price_per_million", "output_price_per_million"])

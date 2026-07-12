@@ -31,7 +31,9 @@ def _run(corpus_root, **kw):
 def _live(corpus_root, **kw):
     """Live-path helper: selects the openai lane + explicit model (never mock, never launched
     past the credential gate in these tests)."""
-    lane = resolve_model(select_lane(load_lanes(corpus_root), "openai-native"), "gpt-5.4-nano")
+    lane = resolve_model(
+        select_lane(load_lanes(corpus_root), "openai-native"), "gpt-5.4-nano-2026-03-17"
+    )
     fixtures = select_fixtures(load_fixtures(corpus_root), ["GEN-001"], lane=lane)
     return run(
         run_id="testrun",
@@ -39,7 +41,7 @@ def _live(corpus_root, **kw):
         lanes=load_lanes(corpus_root),
         config=load_config(corpus_root),
         selected_lane=lane,
-        model="gpt-5.4-nano",
+        model="gpt-5.4-nano-2026-03-17",
         root=corpus_root,
         live=True,
         **kw,
@@ -68,7 +70,9 @@ def test_live_without_confirm_is_refused(corpus_root) -> None:
 
 def test_live_without_budget_is_refused(corpus_root) -> None:
     no_budget = AuditConfig(None, None, 80, 256, 30000, 0)
-    lane = resolve_model(select_lane(load_lanes(corpus_root), "openai-native"), "gpt-5.4-nano")
+    lane = resolve_model(
+        select_lane(load_lanes(corpus_root), "openai-native"), "gpt-5.4-nano-2026-03-17"
+    )
     fixtures = select_fixtures(load_fixtures(corpus_root), ["GEN-001"], lane=lane)
     with pytest.raises(BudgetError):
         run(
@@ -77,7 +81,7 @@ def test_live_without_budget_is_refused(corpus_root) -> None:
             lanes=load_lanes(corpus_root),
             config=no_budget,
             selected_lane=lane,
-            model="gpt-5.4-nano",
+            model="gpt-5.4-nano-2026-03-17",
             root=corpus_root,
             live=True,
             confirm_live=True,

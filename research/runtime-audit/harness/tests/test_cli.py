@@ -73,7 +73,7 @@ def test_run_execute_missing_config_refused(corpus_root: Path, capsys) -> None:
                 "--lane",
                 "openai-native",
                 "--model",
-                "gpt-5.4-nano",
+                "gpt-5.4-nano-2026-03-17",
                 "--fixtures",
                 "GEN-001",
             ]
@@ -96,7 +96,7 @@ def test_run_unknown_config_path_refused(corpus_root: Path, capsys) -> None:
                 "--lane",
                 "openai-native",
                 "--model",
-                "gpt-5.4-nano",
+                "gpt-5.4-nano-2026-03-17",
                 "--fixtures",
                 "GEN-001",
             ]
@@ -120,7 +120,7 @@ def test_run_unapproved_fixture_refused_before_launch(corpus_root: Path, capsys)
                 "--lane",
                 "openai-native",
                 "--model",
-                "gpt-5.4-nano",
+                "gpt-5.4-nano-2026-03-17",
                 "--fixtures",
                 "GEN-001,ERROR-001",
             ]
@@ -147,7 +147,7 @@ def test_run_offline_execute_full_pipeline_via_cli(capsys) -> None:
                 "--lane",
                 "openai-native",
                 "--model",
-                "gpt-5.4-nano",
+                "gpt-5.4-nano-2026-03-17",
                 "--offline-execute",
                 "--run-id",
                 run_id,

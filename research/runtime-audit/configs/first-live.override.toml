@@ -24,12 +24,17 @@ approved_fixtures = ["GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001",
 # strings so budget arithmetic stays exact Decimal, never binary float. Never fetched at
 # runtime and never silently updated; recorded by digest in each run manifest. The estimate
 # it feeds is a safety upper bound, not an accounting claim. price_checked_at 2026-07-13.
+# model_id is the EXACT OpenAI snapshot gpt-5.4-nano-2026-03-17 (not the moving alias
+# gpt-5.4-nano) for reproducible audit evidence; it must equal the --model passed at run
+# time (pricing.gate_cost refuses on model/snapshot mismatch). Cached-input is $0.02/1M per
+# official docs but is intentionally NOT modelled here: the upper bound uses full input
+# price (more conservative) with retries=0, so caching cannot raise the bound.
 [[pricing]]
-model_id = "gpt-5.4-nano"
+model_id = "gpt-5.4-nano-2026-03-17"
 price_checked_at = "2026-07-13"
-input_price_per_million = "0.20"      # USD per 1M input tokens
+input_price_per_million = "0.20"      # USD per 1M input tokens (official; cached-in $0.02)
 output_price_per_million = "1.25"     # USD per 1M output tokens
 estimated_input_tokens_per_call = 500 # generous upper estimate for the bounded fixtures
 maximum_output_tokens_per_call = 128  # equals [execution].max_output_tokens
 maximum_calls = 8                     # equals [budget].max_live_calls
-pricing_source_note = "cheapest GPT-5.4-class model; OpenAI pricing page + GPT-5 developer announcement, checked 2026-07-13"
+pricing_source_note = "gpt-5.4-nano-2026-03-17 exact snapshot (released 2026-03-17); developers.openai.com model + pricing docs, reconfirmed 2026-07-13: in $0.20 / cached-in $0.02 / out $1.25 per 1M"

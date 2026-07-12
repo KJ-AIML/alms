@@ -56,15 +56,17 @@ _APPROVED = ["GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001", "USAGE-
 def _live_plan(corpus_root, mode: str, creds: dict):
     cfg_path = corpus_root / "configs" / "first-live.override.toml"
     config = load_config_path(cfg_path)
-    pricing = load_snapshots(load_raw(cfg_path)).get("gpt-5.4-nano")
-    lane = resolve_model(select_lane(load_lanes(corpus_root), "openai-native"), "gpt-5.4-nano")
+    pricing = load_snapshots(load_raw(cfg_path)).get("gpt-5.4-nano-2026-03-17")
+    lane = resolve_model(
+        select_lane(load_lanes(corpus_root), "openai-native"), "gpt-5.4-nano-2026-03-17"
+    )
     fixtures = select_fixtures(
         load_fixtures(corpus_root), _APPROVED, lane=lane, approved_fixtures=_APPROVED
     )
     return build_live_plan(
         mode=mode,
         lane=lane,
-        model="gpt-5.4-nano",
+        model="gpt-5.4-nano-2026-03-17",
         fixtures=fixtures,
         config=config,
         credentials=creds,
@@ -82,7 +84,7 @@ def test_live_plan_offline_all_six_call_no_skips(corpus_root) -> None:
     assert [f.fixture_id for f in plan.fixtures] == _APPROVED
     assert plan.maximum_call_count == 8
     assert plan.estimated_upper_bound_cost_usd == "0.00156"  # 6 calls
-    assert plan.pricing["model_id"] == "gpt-5.4-nano"
+    assert plan.pricing["model_id"] == "gpt-5.4-nano-2026-03-17"
 
 
 def test_live_plan_live_without_credential_blocks_all(corpus_root) -> None:

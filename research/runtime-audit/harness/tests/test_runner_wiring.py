@@ -32,8 +32,10 @@ def _offline_run(corpus_root, run_id="wire-1", ids=None):
     cfg_path = corpus_root / "configs" / "first-live.override.toml"
     raw = load_raw(cfg_path)
     config = load_config_path(cfg_path)
-    pricing = load_snapshots(raw).get("gpt-5.4-nano")
-    lane = resolve_model(select_lane(load_lanes(corpus_root), "openai-native"), "gpt-5.4-nano")
+    pricing = load_snapshots(raw).get("gpt-5.4-nano-2026-03-17")
+    lane = resolve_model(
+        select_lane(load_lanes(corpus_root), "openai-native"), "gpt-5.4-nano-2026-03-17"
+    )
     fixtures = select_fixtures(
         load_fixtures(corpus_root), ids, lane=lane, approved_fixtures=approved_fixtures(raw)
     )
@@ -44,7 +46,7 @@ def _offline_run(corpus_root, run_id="wire-1", ids=None):
         config=config,
         offline_execute=True,
         selected_lane=lane,
-        model="gpt-5.4-nano",
+        model="gpt-5.4-nano-2026-03-17",
         pricing=pricing,
         config_digest="test-digest",
         command_line="test",
@@ -129,7 +131,9 @@ def test_shape_scan_detects_key_shaped_string_without_a_needle(tmp_path):
     (tmp_path / "leak.txt").write_text(f"key={_SYNTHETIC_KEY}", encoding="utf-8")
     assert len(scan_for_secret_shapes(tmp_path)) == 1
     (tmp_path / "leak.txt").unlink()
-    (tmp_path / "clean.txt").write_text("model=gpt-5.4-nano id=resp_mock_1", encoding="utf-8")
+    (tmp_path / "clean.txt").write_text(
+        "model=gpt-5.4-nano-2026-03-17 id=resp_mock_1", encoding="utf-8"
+    )
     assert scan_for_secret_shapes(tmp_path) == []
 
 

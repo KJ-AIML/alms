@@ -57,8 +57,8 @@ def test_resolve_model_required():
 
 
 def test_resolve_model_binds_explicit_model():
-    lane = resolve_model(_openai_lane(), "gpt-5.4-nano")
-    assert lane["model"] == "gpt-5.4-nano"
+    lane = resolve_model(_openai_lane(), "gpt-5.4-nano-2026-03-17")
+    assert lane["model"] == "gpt-5.4-nano-2026-03-17"
     assert lane["lane_id"] == "openai-native"
 
 
