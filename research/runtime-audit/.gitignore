@@ -1,0 +1,18 @@
+# Local execution output — never committed (raw run artifacts, transcripts, manifests)
+/runs/*
+!/runs/.gitkeep
+
+# Local secrets and credentials — never committed
+.env
+.env.*
+!.env.example
+*.local.toml
+*.key
+*.pem
+secrets/
+
+# Probe/harness virtual environments and caches
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/

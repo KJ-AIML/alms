@@ -1,0 +1,66 @@
+{
+  "captured_at": "2026-07-12T16:05:49Z",
+  "repository": "alms",
+  "branch": "research/runtime-audit-phase0",
+  "base_branch": "main",
+  "head": "04624bfeb83d47f0f442e317995795cb2a9dc1c2",
+  "head_short": "04624bf",
+  "origin_main_sync": "0 ahead / 0 behind origin/main",
+  "tag_relationship": "v0.3.4-2-g04624bf; tag v0.3.4=0043e9ecc875a988eb2344f4cdfb3e40461934bb is an ancestor of HEAD; Bible implementation commit 95592f6 present in history; HEAD is 2 post-release security/CI commits (741fd85, merge #17) ahead of the v0.3.4 tag",
+  "worktree_clean": true,
+  "python": "3.13.13",
+  "uv": "0.11.16",
+  "ruff": "0.14.11",
+  "pytest": "9.0.2",
+  "os": "Windows 10.0.26200.8655 (win32); MINGW64 shell",
+  "baseline_commands": [
+    "uv sync",
+    "uv run pytest src/tests",
+    "uv run ruff check src/"
+  ],
+  "baseline_results": [
+    {
+      "command": "uv sync",
+      "exit_code": 0,
+      "result": "PASS",
+      "detail": "Resolved 135 packages; installed 48 into new .venv on CPython 3.13.13. Base + dev group only (no ai/db/observability extras). Writes only gitignored .venv/; tracked tree unchanged."
+    },
+    {
+      "command": "uv run pytest src/tests",
+      "exit_code": 1,
+      "result": "PARTIAL",
+      "summary": "9 failed, 46 passed, 4 skipped",
+      "detail": "All 9 failures are integration/e2e tests in src/tests/integration/test_full_stack.py and src/tests/e2e/test_workflows.py requiring the db + observability optional extras and a live database (health readiness returns 503). sqlalchemy, asyncpg, opentelemetry, prometheus_client are not installed in the base offline env. Classification: environment/dependency condition, not a baseline code regression.",
+      "failed_tests": [
+        "src/tests/e2e/test_workflows.py::TestCompleteRequestLifecycle::test_request_with_full_observability",
+        "src/tests/e2e/test_workflows.py::TestCompleteRequestLifecycle::test_request_metrics_accumulation",
+        "src/tests/e2e/test_workflows.py::TestErrorRecovery::test_service_recover_after_error",
+        "src/tests/e2e/test_workflows.py::TestEndToEndPerformance::test_health_endpoint_under_load",
+        "src/tests/integration/test_full_stack.py::TestFullStackIntegration::test_api_v1_health_endpoint",
+        "src/tests/integration/test_full_stack.py::TestFullStackIntegration::test_metrics_endpoint_available",
+        "src/tests/integration/test_full_stack.py::TestObservabilityIntegration::test_metrics_record_http_requests",
+        "src/tests/integration/test_full_stack.py::TestErrorHandlingIntegration::test_service_recover_after_error",
+        "src/tests/integration/test_full_stack.py::TestPerformanceBenchmarks::test_health_endpoint_response_time"
+      ]
+    },
+    {
+      "command": "uv run ruff check src/",
+      "exit_code": 0,
+      "result": "PASS",
+      "detail": "All checks passed!"
+    }
+  ],
+  "no_live_provider_calls": true,
+  "secrets_touched": false,
+  "known_non_blocking_findings": [
+    "bare alms cp1252 display issue",
+    "MODEL_PROVIDER missing from AI .env.example",
+    "provider boundary under-explained in README",
+    "Full offline pytest src/tests is not all-green at HEAD under base uv sync: 9 integration/e2e tests fail due to missing db+observability extras and no live database (environment-class, not a code regression). Bible §7 '31/31 green' is contingent on extras/services or a narrower generated-test subset; discrepancy recorded here, to be confirmed in a follow-up."
+  ],
+  "sibling_repos": [
+    { "repo": "agent-native-backend", "branch": "main", "head": "7f9d6716124732d25dc941facdfa00569a69c1ca", "clean": true, "role": "conceptual source, read-only in Phase 0" },
+    { "repo": "alms-langgraph-agent-skill", "branch": "main", "head": "9dce322ed1b68b096657fb868c15b6496330c154", "tag": "v0.4.0", "clean": true, "role": "coding-agent guidance, read-only in Phase 0" }
+  ],
+  "note": "Historical evidence. Per DevSpec §9 this manifest must not be rewritten to make later results look cleaner."
+}
