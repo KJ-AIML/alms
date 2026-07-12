@@ -56,11 +56,11 @@
     "bare alms cp1252 display issue",
     "MODEL_PROVIDER missing from AI .env.example",
     "provider boundary under-explained in README",
-    "Full offline pytest src/tests is not all-green at HEAD under base uv sync: 9 integration/e2e tests fail due to missing db+observability extras and no live database (environment-class, not a code regression). Bible §7 '31/31 green' is contingent on extras/services or a narrower generated-test subset; discrepancy recorded here, to be confirmed in a follow-up."
+    "Full offline pytest src/tests is not all-green at HEAD under base uv sync: 9 integration/e2e tests fail due to missing db+observability extras and no live database (environment-class, not a code regression). Bible Section 7 '31/31 green' is contingent on extras/services or a narrower generated-test subset; discrepancy recorded here, to be confirmed in a follow-up."
   ],
   "sibling_repos": [
     { "repo": "agent-native-backend", "branch": "main", "head": "7f9d6716124732d25dc941facdfa00569a69c1ca", "clean": true, "role": "conceptual source, read-only in Phase 0" },
     { "repo": "alms-langgraph-agent-skill", "branch": "main", "head": "9dce322ed1b68b096657fb868c15b6496330c154", "tag": "v0.4.0", "clean": true, "role": "coding-agent guidance, read-only in Phase 0" }
   ],
-  "note": "Historical evidence. Per DevSpec §9 this manifest must not be rewritten to make later results look cleaner."
+  "note": "Historical evidence. Per DevSpec Section 9 this manifest must not be rewritten to make later results look cleaner."
 }

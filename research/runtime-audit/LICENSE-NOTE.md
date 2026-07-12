@@ -15,4 +15,4 @@ license and each provider's API terms of service.
 
 Raw run artifacts under `runs/` are local, gitignored, and may contain provider
 responses. They must be redacted before any artifact is promoted into `evidence/`
-(DevSpec §85 Raw Artifact Redaction). No API keys or secrets belong in any committed file.
+(DevSpec Section 85 Raw Artifact Redaction). No API keys or secrets belong in any committed file.

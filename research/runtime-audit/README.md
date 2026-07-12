@@ -16,11 +16,11 @@ Authority: [`docs/ALMS_DEVSPEC_PHASE0_v1.0.md`](docs/ALMS_DEVSPEC_PHASE0_v1.0.md
 
 ## Ground rules (Phase 0)
 
-- Production ALMS source, CLI behavior, and public package metadata are **read-only** (DevSpec §11).
-- Each runtime probe runs in its **own** isolated Python project + lockfile. No shared runtime-SDK env (DevSpec §20, §25).
-- No live provider calls without explicit confirmation **and** budget controls (DevSpec §80, §83).
+- Production ALMS source, CLI behavior, and public package metadata are **read-only** (DevSpec Section 11).
+- Each runtime probe runs in its **own** isolated Python project + lockfile. No shared runtime-SDK env (DevSpec Section 20, Section 25).
+- No live provider calls without explicit confirmation **and** budget controls (DevSpec Section 80, Section 83).
 - No secrets are created, committed, printed, or inferred. `runs/` and `.env*` are gitignored.
-- No public release, version bump, or stable-compatibility tag from this branch (DevSpec §10).
+- No public release, version bump, or stable-compatibility tag from this branch (DevSpec Section 10).
 
 ## Layout
 

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "alms.dev/probe-response/v0",
+  "title": "Probe Response / Raw Run Manifest v0",
+  "$comment": "PROVISIONAL — AUDIT INFRASTRUCTURE ONLY. The raw run manifest a probe returns on stdout (DevSpec Section 30 and Section 42). It captures WHAT HAPPENED at the runtime, with paths to raw artifacts. A probe must NOT decide whether the lane passed an ALMS invariant, and must NOT rewrite a failed call into a fake success. This is the raw truth; it is NOT the normalized transcript.",
+  "type": "object",
+  "required": [
+    "spec", "run_id", "fixture_id", "fixture_hash", "probe_id", "probe_version",
+    "package_versions", "provider", "model", "started_at", "ended_at", "exit_code",
+    "stdout_path", "stderr_path", "request_path", "response_path", "redaction_summary"
+  ],
+  "properties": {
+    "spec": { "const": "alms.dev/probe-response/v0" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "fixture_id": { "type": "string", "minLength": 1 },
+    "fixture_hash": { "type": "string", "minLength": 1 },
+    "probe_id": { "type": "string", "minLength": 1 },
+    "probe_version": { "type": "string", "minLength": 1 },
+    "package_versions": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "provider": { "type": "string", "minLength": 1 },
+    "model": { "type": "string", "minLength": 1 },
+    "started_at": { "type": "string", "format": "date-time" },
+    "ended_at": { "type": "string", "format": "date-time" },
+    "exit_code": { "type": "integer" },
+    "stdout_path": { "type": "string" },
+    "stderr_path": { "type": "string" },
+    "request_path": { "type": "string" },
+    "response_path": { "type": "string" },
+    "retry_count_observed": {
+      "type": ["integer", "null"],
+      "$comment": "null when the probe cannot measure framework-internal retries; NOT silently coerced to 0."
+    },
+    "timeout_or_cancellation_action": {
+      "type": ["string", "null"],
+      "enum": ["timeout_fired", "client_cancelled", "completed_before_deadline", null],
+      "$comment": "Local cancellation != provider definitely stopped. This records the CLIENT-side action only."
+    },
+    "redaction_summary": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["strict", "minimal"] },
+        "fields_redacted": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "alms.dev/runtime-audit-fixture/v0",
+  "title": "Runtime Audit Fixture v0",
+  "$comment": "AUDIT INFRASTRUCTURE ONLY. Describes intent, execution controls, and expected invariants in a language-neutral way (DevSpec Section 27 and Section 28). It is NOT the ALMS runtime contract. output_schema being present does not imply the runtime must produce NATIVE structured output: schema-valid output != native structured output.",
+  "type": "object",
+  "required": ["spec", "id", "feature", "summary", "requirements", "execution", "expected_invariants"],
+  "oneOf": [
+    { "required": ["messages"] },
+    { "required": ["embedding_inputs"] }
+  ],
+  "properties": {
+    "spec": { "const": "alms.dev/runtime-audit-fixture/v0" },
+    "id": { "type": "string", "minLength": 1 },
+    "feature": {
+      "type": "string",
+      "enum": [
+        "generation", "roles", "structured_output", "tools", "streaming",
+        "cancellation", "timeout", "retry", "errors", "usage", "embeddings", "multimodal"
+      ]
+    },
+    "summary": { "type": "string", "minLength": 1 },
+    "messages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["role", "parts"],
+        "properties": {
+          "role": { "type": "string", "enum": ["system", "user", "assistant", "tool"] },
+          "parts": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["kind"],
+              "properties": {
+                "kind": { "type": "string", "enum": ["text", "image", "audio", "tool_result", "tool_call"] },
+                "text": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "embedding_inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "output_schema": { "type": "object" },
+    "tools": { "type": "array", "items": { "type": "object" } },
+    "requirements": {
+      "type": "object",
+      "required": ["live_required", "capabilities"],
+      "properties": {
+        "live_required": { "type": "boolean" },
+        "supports_mock_mode": { "type": "boolean" },
+        "capabilities": { "type": "array", "items": { "type": "string" } },
+        "accepted_capability_modes": { "type": "array", "items": { "type": "string" } },
+        "provider_extension_allowed": { "type": "boolean" },
+        "tier": { "type": "string", "enum": ["base", "stress", "optional"] }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "temperature": { "type": "number", "minimum": 0 },
+        "max_output_tokens": { "type": "integer", "minimum": 1 },
+        "timeout_ms": { "type": "integer", "minimum": 1 },
+        "stream": { "type": "boolean" },
+        "max_attempts": { "type": "integer", "minimum": 1 },
+        "cancel_after_ms": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "expected_invariants": { "type": "object" }
+  }
+}

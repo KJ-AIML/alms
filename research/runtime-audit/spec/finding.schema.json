@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "alms.dev/runtime-audit-finding/v0",
+  "title": "Finding Record v0",
+  "$comment": "AUDIT INFRASTRUCTURE ONLY (DevSpec Section 36 and Section 18). A finding is NOT accepted merely because the coding agent wrote it; F0 and F1 findings require human (KJ) review. status therefore starts at 'proposed'.",
+  "type": "object",
+  "required": [
+    "spec", "id", "severity", "status", "runtime_lanes", "fixture_ids", "assumption_id",
+    "expected_behavior", "observed_behavior", "reproduction_command",
+    "raw_evidence_refs", "normalized_evidence_refs", "semantic_impact",
+    "contract_implication", "confidence", "follow_up_experiment", "kj_decision"
+  ],
+  "properties": {
+    "spec": { "const": "alms.dev/runtime-audit-finding/v0" },
+    "id": { "type": "string", "minLength": 1 },
+    "severity": {
+      "type": "string",
+      "enum": ["F0", "F1", "F2", "F3", "F4"],
+      "$comment": "F0=STRATEGY_INVALIDATING, F1=CONTRACT_CHANGING, F2=CAPABILITY_SHAPING, F3=IMPLEMENTATION_NOTE, F4=ENVIRONMENTAL."
+    },
+    "status": { "type": "string", "enum": ["proposed", "under_review", "accepted", "rejected"] },
+    "runtime_lanes": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "fixture_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "assumption_id": { "type": "string" },
+    "expected_behavior": { "type": "string", "minLength": 1 },
+    "observed_behavior": { "type": "string", "minLength": 1 },
+    "reproduction_command": { "type": "string", "minLength": 1 },
+    "raw_evidence_refs": { "type": "array", "items": { "type": "string" } },
+    "normalized_evidence_refs": { "type": "array", "items": { "type": "string" } },
+    "semantic_impact": { "type": "string" },
+    "contract_implication": { "type": "string" },
+    "confidence": { "type": "string", "enum": ["low", "medium", "high"] },
+    "follow_up_experiment": { "type": ["string", "null"] },
+    "kj_decision": {
+      "type": ["string", "null"],
+      "$comment": "null until KJ reviews. Required key present, value may be null while proposed."
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "alms.dev/runtime-audit-result/v0",
+  "title": "Result Record v0",
+  "$comment": "AUDIT INFRASTRUCTURE ONLY (DevSpec Section 34). One record per fixture x lane execution. status distinguishes UNSUPPORTED / BLOCKED / FAIL_INVARIANT / ERROR_RUNTIME because they carry different architectural meaning: unsupported != failed. usage is provenance-aware and nullable: missing usage != zero usage.",
+  "type": "object",
+  "required": ["spec", "run_id", "fixture_id", "lane_id", "status", "raw_manifest"],
+  "properties": {
+    "spec": { "const": "alms.dev/runtime-audit-result/v0" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "fixture_id": { "type": "string", "minLength": 1 },
+    "lane_id": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "PASS_WITH_EXTENSION",
+        "UNSUPPORTED_DECLARED",
+        "UNSUPPORTED_OBSERVED",
+        "BLOCKED_CONFIGURATION",
+        "FAIL_INVARIANT",
+        "ERROR_RUNTIME",
+        "INCONCLUSIVE"
+      ]
+    },
+    "observed_capabilities": { "type": "object" },
+    "normalized_transcript": { "type": ["string", "null"] },
+    "raw_manifest": { "type": "string", "minLength": 1 },
+    "invariants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "passed"],
+        "properties": {
+          "name": { "type": "string" },
+          "passed": { "type": "boolean" },
+          "detail": { "type": "string" }
+        }
+      }
+    },
+    "timing": { "type": "object" },
+    "usage": {
+      "type": "object",
+      "$comment": "DevSpec Section 32. All token fields nullable; missing usage stays null, never 0. finality=partial when cancelled mid-stream.",
+      "properties": {
+        "input_tokens": { "type": ["integer", "null"] },
+        "output_tokens": { "type": ["integer", "null"] },
+        "total_tokens": { "type": ["integer", "null"] },
+        "cached_input_tokens": { "type": ["integer", "null"] },
+        "reasoning_tokens": { "type": ["integer", "null"] },
+        "other_provider_tokens": { "type": ["object", "null"] },
+        "cost_reported": { "type": ["number", "null"] },
+        "cost_estimated": { "type": ["number", "null"] },
+        "currency": { "type": ["string", "null"] },
+        "provenance": { "type": "string", "enum": ["reported", "estimated", "mixed", "absent"] },
+        "finality": { "type": "string", "enum": ["final", "partial"] }
+      }
+    },
+    "cost": { "type": "object" },
+    "notes": { "type": "array", "items": { "type": "string" } },
+    "finding_refs": { "type": "array", "items": { "type": "string" } }
+  }
+}

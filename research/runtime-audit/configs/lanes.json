@@ -1,0 +1,12 @@
+{
+  "$comment": "Canonical Phase 0 runtime lanes (DevSpec Section 47 and Section 29). Model ids are supplied at execution time and recorded in each run manifest (DevSpec Section 15), so 'model' is null here. This is configuration, not one of the seven evidence schemas.",
+  "lanes": [
+    { "lane_id": "langchain-openai", "runtime_layer": "langchain", "provider": "openai", "model": null, "transport": "direct" },
+    { "lane_id": "openai-native", "runtime_layer": "openai", "provider": "openai", "model": null, "transport": "direct" },
+    { "lane_id": "anthropic-native", "runtime_layer": "anthropic", "provider": "anthropic", "model": null, "transport": "direct" },
+    { "lane_id": "gemini-native", "runtime_layer": "google-genai", "provider": "google", "model": null, "transport": "direct" },
+    { "lane_id": "litellm", "runtime_layer": "litellm", "provider": "openai", "model": null, "transport": "gateway" },
+    { "lane_id": "pydanticai-openai", "runtime_layer": "pydantic-ai", "provider": "openai", "model": null, "transport": "direct" },
+    { "lane_id": "mirascope-openai", "runtime_layer": "mirascope", "provider": "openai", "model": null, "transport": "direct" }
+  ]
+}

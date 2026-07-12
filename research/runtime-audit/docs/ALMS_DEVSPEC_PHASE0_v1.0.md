@@ -98,7 +98,7 @@ The audit is not allowed to begin by assuming the final `ModelRuntime` interface
 | ADR-006 — Conformance tests semantic invariants | LOCKED | Assertions compare invariants rather than exact prose, chunk boundaries, or raw SDK objects. |
 | ADR-014 — Delay repository split | LOCKED | The audit lives inside the current `alms` repository as an isolated research workspace. No repo rename or extraction. |
 | ADR-020 — Broad research ends | LOCKED | Remaining semantic questions are answered by code, runs, evidence, and findings rather than another broad framework survey. |
-| Bible §131 / §143 | LOCKED direction | Phase 0 must produce audit harness, fixtures, probes, raw and normalized results, finding log, cost record, and decision memo. |
+| Bible Section 131 / Section 143 | LOCKED direction | Phase 0 must produce audit harness, fixtures, probes, raw and normalized results, finding log, cost record, and decision memo. |
 | Bible Q-001 to Q-005 | OPEN | Phase 0 must produce decision inputs for structured-output shape, cancellation ownership, required event types, provider extensions, and embedding scope. |
 
 ## 3. In Scope
@@ -2415,26 +2415,26 @@ Every REQUIRED statement in implementation work should map to one of these top-l
 
 | Requirement | Requirement summary | Trace |
 | --- | --- | --- |
-| R-BAS-001 | Preserve the stable v0.3.4 public path | Bible §131, ADR-014 |
-| R-SCP-001 | Keep Phase 0 isolated from production runtime/core work | Bible §167 |
-| R-DAT-001 | Preserve raw evidence separately from normalized interpretation | Bible §61 |
-| R-DAT-002 | Use language-neutral JSON-compatible fixtures | Bible §60 |
+| R-BAS-001 | Preserve the stable v0.3.4 public path | Bible Section 131, ADR-014 |
+| R-SCP-001 | Keep Phase 0 isolated from production runtime/core work | Bible Section 167 |
+| R-DAT-001 | Preserve raw evidence separately from normalized interpretation | Bible Section 61 |
+| R-DAT-002 | Use language-neutral JSON-compatible fixtures | Bible Section 60 |
 | R-HAR-001 | Isolate runtime probe dependencies | DevSpec decision; supports unbiased evidence |
-| R-HAR-002 | Use an audit-only subprocess protocol, not a future runtime API | Bible §166 |
-| R-RUN-001 | Audit required runtime lanes | Bible §58 |
+| R-HAR-002 | Use an audit-only subprocess protocol, not a future runtime API | Bible Section 166 |
+| R-RUN-001 | Audit required runtime lanes | Bible Section 58 |
 | R-CMP-001 | Use same-provider control lanes where possible | Derived experimental control requirement |
 | R-CMP-002 | Execute at least one non-OpenAI native vendor lane | ADR-002 anti-bias gate |
 | R-SEM-001 | Evaluate semantic invariants, not identical behavior | ADR-006 |
-| R-SEM-002 | Distinguish unsupported, blocked, failed, errored, and inconclusive | Bible §67 |
-| R-CST-001 | Fail closed on live budget/call caps | Bible §63 |
+| R-SEM-002 | Distinguish unsupported, blocked, failed, errored, and inconclusive | Bible Section 67 |
+| R-CST-001 | Fail closed on live budget/call caps | Bible Section 63 |
 | R-SEC-001 | Prevent secret leakage in requests, logs, artifacts, and commits | Bible security canon |
-| R-EVD-001 | Produce at least one accepted F1 finding | Bible §65/§66 |
-| R-EVD-002 | Publish immutable evidence revision P0-E1 | Bible §167 handoff requirement |
+| R-EVD-001 | Produce at least one accepted F1 finding | Bible Section 65 and Section 66 |
+| R-EVD-002 | Publish immutable evidence revision P0-E1 | Bible Section 167 handoff requirement |
 | R-DEC-001 | Answer Q-001 structured-output decision | Bible Appendix F |
 | R-DEC-002 | Answer Q-002 cancellation decision | Bible Appendix F |
 | R-DEC-003 | Answer Q-003 event-vocabulary decision | Bible Appendix F |
 | R-DEC-005 | Answer or defer Q-005 embedding scope with evidence | Bible Appendix F |
-| R-HOF-001 | Select Phase 1A proof adapters and conformance subset | Bible §132/§166 |
+| R-HOF-001 | Select Phase 1A proof adapters and conformance subset | Bible Section 132 and Section 166 |
 
 ## 116. Coding Agent Operating Protocol
 

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "alms.dev/runtime-audit-run-manifest/v0",
+  "title": "Run Manifest v0",
+  "$comment": "AUDIT INFRASTRUCTURE ONLY (DevSpec Section 35). Immutable per-run manifest. MUST NEVER contain secret values: only credential PRESENCE booleans are recorded, never keys. additionalProperties is false at the top level to make an accidental secret field a validation failure.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "spec", "run_id", "git_sha", "harness_lock_hash", "probe_lock_hashes",
+    "fixture_corpus_hash", "os", "python", "selected_lanes", "selected_fixtures",
+    "model_configuration", "credential_presence", "budget", "command_line",
+    "started_at", "ended_at"
+  ],
+  "properties": {
+    "spec": { "const": "alms.dev/runtime-audit-run-manifest/v0" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "git_sha": { "type": "string", "minLength": 1 },
+    "harness_lock_hash": { "type": "string", "minLength": 1 },
+    "probe_lock_hashes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "fixture_corpus_hash": { "type": "string", "minLength": 1 },
+    "os": { "type": "string" },
+    "python": { "type": "string" },
+    "selected_lanes": { "type": "array", "items": { "type": "string" } },
+    "selected_fixtures": { "type": "array", "items": { "type": "string" } },
+    "model_configuration": {
+      "type": "object",
+      "$comment": "Model ids are supplied at execution time and recorded here (DevSpec Section 15). Not hardcoded in the committed spec."
+    },
+    "credential_presence": {
+      "type": "object",
+      "$comment": "Booleans ONLY. Presence, never the value.",
+      "additionalProperties": { "type": "boolean" }
+    },
+    "budget": {
+      "type": "object",
+      "required": ["hard_cap_usd"],
+      "properties": {
+        "hard_cap_usd": { "type": ["number", "null"] },
+        "max_calls": { "type": ["integer", "null"] }
+      }
+    },
+    "command_line": { "type": "string" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "ended_at": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "alms.dev/normalized-transcript/v0",
+  "title": "Normalized Transcript v0",
+  "$comment": "AUDIT COMPARISON TOOL ONLY (DevSpec Section 31). It is NOT the future ALMS event contract. Raw Evidence != Normalized Interpretation: every event MUST carry raw_ref pointing back to the raw artifact, so the normalizer cannot silently delete inconvenient semantics. When native semantics do not fit the candidate vocabulary, emit a provider_extension event rather than discarding evidence.",
+  "type": "object",
+  "required": ["spec", "raw_manifest", "events"],
+  "properties": {
+    "spec": { "const": "alms.dev/normalized-transcript/v0" },
+    "raw_manifest": {
+      "type": "string",
+      "minLength": 1,
+      "$comment": "Path to the probe-response raw run manifest this transcript was derived from."
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sequence", "type", "timestamp_relative_ms", "data", "raw_ref"],
+        "properties": {
+          "sequence": { "type": "integer", "minimum": 0 },
+          "type": {
+            "type": "string",
+            "enum": [
+              "response_started",
+              "text_delta",
+              "tool_call_started",
+              "tool_call_arguments_delta",
+              "tool_call_completed",
+              "structured_output_completed",
+              "usage_updated",
+              "response_completed",
+              "cancelled",
+              "error",
+              "provider_extension"
+            ]
+          },
+          "timestamp_relative_ms": { "type": "number", "minimum": 0 },
+          "data": { "type": "object" },
+          "raw_ref": {
+            "type": "string",
+            "minLength": 1,
+            "$comment": "REQUIRED. Reference into the raw artifact that justifies this normalized event."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "alms.dev/probe-request/v0",
+  "title": "Probe Request v0",
+  "$comment": "PROVISIONAL — AUDIT INFRASTRUCTURE ONLY. NOT THE ALMS RUNTIME CONTRACT. This is the one JSON message the harness passes to a probe subprocess (DevSpec Section 23 and Section 41). Probe Process Protocol v0 != future ModelRuntime contract.",
+  "type": "object",
+  "required": ["protocol_version", "run_id", "fixture_path", "lane", "output_dir", "controls", "redaction_mode"],
+  "properties": {
+    "protocol_version": { "const": "alms.dev/probe-protocol/v0" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "fixture_path": { "type": "string", "minLength": 1 },
+    "lane": {
+      "type": "object",
+      "$comment": "Three independent identifiers; never collapsed into one provider string (DevSpec Section 29).",
+      "required": ["lane_id", "runtime_layer", "provider", "model"],
+      "properties": {
+        "lane_id": { "type": "string", "minLength": 1 },
+        "runtime_layer": { "type": "string", "minLength": 1 },
+        "runtime_version": { "type": "string" },
+        "provider": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "transport": { "type": "string", "enum": ["direct", "proxy", "gateway"] }
+      }
+    },
+    "output_dir": { "type": "string", "minLength": 1 },
+    "controls": {
+      "type": "object",
+      "required": ["timeout_ms", "max_attempts"],
+      "properties": {
+        "timeout_ms": { "type": "integer", "minimum": 1 },
+        "max_attempts": { "type": "integer", "minimum": 1 },
+        "cancel_after_ms": { "type": "integer", "minimum": 1 },
+        "stream": { "type": "boolean" },
+        "mock_mode": { "type": "boolean" }
+      }
+    },
+    "redaction_mode": { "type": "string", "enum": ["strict", "minimal"] }
+  }
+}
