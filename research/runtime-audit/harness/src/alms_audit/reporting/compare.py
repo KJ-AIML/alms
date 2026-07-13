@@ -24,6 +24,13 @@ DISCLAIMER = (
     "Both lanes used injected offline fakes; a shape difference is not by itself a finding."
 )
 
+MODEL_IDENTITY_NOTE = (
+    "Observed returned model values in this report are synthetic offline evidence unless "
+    "explicitly marked live (execution_mode). A requested/observed mismatch offline reflects the "
+    "mock fixture, NOT verified provider alias/snapshot/gateway routing; that remains "
+    "unverified_until_live. No provider routing behavior is inferred from these offline values."
+)
+
 
 def _read(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
@@ -70,6 +77,9 @@ def _fixture_view(run_dir: Path, fixture_id: str) -> dict:
     strategy = (structured or {}).get("data", {}).get("strategy")
     mechanism = _structured_mechanism(manifest.get("probe_id"), strategy, structured is not None)
 
+    mi = result.get("observed_model_identity") or {}
+    observed_model = mi.get("observed_returned_model")
+
     return {
         "probe_id": manifest.get("probe_id"),
         "capture_kind": manifest.get("capture_kind"),
@@ -89,6 +99,15 @@ def _fixture_view(run_dir: Path, fixture_id: str) -> dict:
         "usage_representation": {
             "present": bool(usage_events),
             "provenance": result.get("usage", {}).get("provenance"),
+        },
+        "model_identity": {
+            "requested_model": mi.get("requested_model"),
+            "observed_returned_model": observed_model,
+            "observed_returned_model_source": mi.get("observed_returned_model_source"),
+            "raw_reference_present": bool(mi.get("observed_returned_model_raw_ref")),
+            "requested_observed_exact_match": mi.get("model_identity_match"),
+            "availability": "available" if observed_model else "unavailable",
+            "execution_mode": mi.get("execution_mode"),
         },
         "extension_events": {
             "provider_extension": event_types.count("provider_extension"),
@@ -123,6 +142,7 @@ def compare_lanes(openai_run: Path, langchain_run: Path, fixture_ids: list[str])
     """Return a structured, disclaimer-tagged comparison across the given fixtures."""
     return {
         "disclaimer": DISCLAIMER,
+        "model_identity_note": MODEL_IDENTITY_NOTE,
         "openai_run": str(openai_run),
         "langchain_run": str(langchain_run),
         "fixtures": [compare_fixture(openai_run, langchain_run, f) for f in fixture_ids],
@@ -139,11 +159,15 @@ def compare_runs(runs: dict[str, Path], fixture_ids: list[str]) -> dict:
     """
     return {
         "disclaimer": DISCLAIMER,
+        "model_identity_note": MODEL_IDENTITY_NOTE,
         "lanes": {label: str(run) for label, run in runs.items()},
         "fixtures": [
             {
                 "fixture_id": f,
                 "by_lane": {label: _fixture_view(run, f) for label, run in runs.items()},
+                "model_identity_by_lane": {
+                    label: _fixture_view(run, f)["model_identity"] for label, run in runs.items()
+                },
                 "structured_strategies": {
                     label: _fixture_view(run, f)["structured_output_strategy"]
                     for label, run in runs.items()

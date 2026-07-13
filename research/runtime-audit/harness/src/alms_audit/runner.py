@@ -448,6 +448,8 @@ def _execute_one(
         pricing=pricing,
         root=root,
         normalizer=select_normalizer(lane.get("runtime_layer")),
+        requested_model=manifest.get("model"),
+        execution_mode=manifest.get("execution_mode"),
     )
     if interp.normalized is not None:
         write_json_atomic(normalized_path, interp.normalized)

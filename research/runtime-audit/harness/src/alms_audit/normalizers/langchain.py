@@ -18,6 +18,11 @@ NORMALIZED_SPEC = "alms.dev/normalized-transcript/v0"
 # block. It must never be labelled provider-native.
 USAGE_SOURCE = provenance.FRAMEWORK_NATIVE
 
+# A model id exposed through LangChain response_metadata is FRAMEWORK-mediated: under a LIVE call
+# it is framework_native, NOT provider_native — even when the string resembles an OpenAI model id.
+# Offline evidence is downgraded to fixture_expected by the shared result builder.
+MODEL_IDENTITY_LIVE_SOURCE = provenance.FRAMEWORK_NATIVE
+
 
 def _evt(seq: int, etype: str, data: dict, raw_ref: str) -> dict:
     return {
@@ -66,6 +71,25 @@ def extract_usage(capture_kind: str, raw_obj: object) -> dict | None:
     if capture_kind == "stream":
         return _summarize((raw_obj.get("final_message") or {}).get("usage_metadata"))
     return None
+
+
+def extract_model_identity(capture_kind: str, raw_obj: object) -> str | None:
+    """The model id exposed through LangChain response_metadata, or None if absent.
+
+    This is a FRAMEWORK-exposed value (response_metadata.model_name), not the provider's own
+    response field; the shared builder tags it framework_native under a live call and never
+    provider_native. The requested model is never copied here: if the framework exposed no model
+    metadata, this returns None (unavailable). Exact string preserved.
+    """
+    if not isinstance(raw_obj, dict):
+        return None
+    if capture_kind == "response":
+        meta = (raw_obj.get("message") or {}).get("response_metadata") or {}
+    elif capture_kind == "stream":
+        meta = (raw_obj.get("final_message") or {}).get("response_metadata") or {}
+    else:
+        return None
+    return meta.get("model_name") or meta.get("model")
 
 
 def _framework_metadata(message: dict) -> dict | None:

@@ -132,6 +132,68 @@ def _terminal_state(normalized: dict | None, source: str) -> dict | None:
     return {"native": native, "category": _TERMINAL_CATEGORY.get(native, "unknown"), "source": src}
 
 
+def _model_identity(
+    nz,
+    capture_kind: str,
+    raw_obj: object,
+    requested_model: str | None,
+    execution_mode: str | None,
+    response_ref: str | None,
+) -> dict:
+    """Neutral cross-lane model identity summary (P0.6D, finding N-05).
+
+    This shared builder holds NO provider-specific extraction path: it delegates to the lane
+    normalizer's ``extract_model_identity`` (each reads its own native shape) and assembles the
+    neutral contract. The requested model (request-side config) is never overwritten by the
+    observation, and the observation is never fabricated from the requested model:
+
+      * observed absent  -> observed_returned_model = None, source = ``unavailable``, no raw_ref.
+      * observed present, offline_mock -> source = ``fixture_expected`` (synthetic, NOT provider/
+        framework-native), raw_ref points at the raw artifact.
+      * observed present, live -> source = the lane's live source (provider_native for a native
+        lane, framework_native for a framework lane).
+
+    ``model_identity_match`` is an EXACT-STRING comparison (no canonicalization) and is purely
+    observational: a mismatch is recorded, never turned into an error here.
+    """
+    observed = None
+    extractor = getattr(nz, "extract_model_identity", None)
+    if extractor is not None:
+        try:
+            observed = extractor(capture_kind, raw_obj)
+        except Exception:  # noqa: BLE001 - a broken extractor yields unavailable, never a crash
+            observed = None
+
+    if not observed:
+        return {
+            "requested_model": requested_model,
+            "observed_returned_model": None,
+            "observed_returned_model_source": provenance.UNAVAILABLE,
+            "observed_returned_model_raw_ref": None,
+            "execution_mode": execution_mode,
+            "model_identity_match": "unknown",
+        }
+
+    if execution_mode == "live":
+        source = getattr(nz, "MODEL_IDENTITY_LIVE_SOURCE", provenance.PROVIDER_NATIVE)
+    else:
+        # Offline synthetic evidence (or unknown mode) is fixture_expected, never provider/
+        # framework-native: an offline provider-shaped object is not a real provider observation.
+        source = provenance.FIXTURE_EXPECTED
+    if requested_model is None:
+        match = "unknown"
+    else:
+        match = "true" if observed == requested_model else "false"
+    return {
+        "requested_model": requested_model,
+        "observed_returned_model": observed,
+        "observed_returned_model_source": source,
+        "observed_returned_model_raw_ref": response_ref,
+        "execution_mode": execution_mode,
+        "model_identity_match": match,
+    }
+
+
 def _derive_status(capture_kind: str, normalized: dict) -> tuple[str, list[str]]:
     if capture_kind == "error":
         return "ERROR_RUNTIME", ["provider_error"]
@@ -164,6 +226,7 @@ def _result(
     usage: dict,
     notes: list[str],
     terminal_state: dict | None = None,
+    model_identity: dict | None = None,
 ) -> dict:
     result = {
         "spec": RESULT_SPEC,
@@ -178,6 +241,8 @@ def _result(
     }
     if terminal_state is not None:
         result["observed_terminal_state"] = terminal_state
+    if model_identity is not None:
+        result["observed_model_identity"] = model_identity
     return result
 
 
@@ -194,16 +259,23 @@ def interpret(
     pricing: PricingSnapshot | None,
     root,
     normalizer=None,
+    requested_model: str | None = None,
+    execution_mode: str | None = None,
 ) -> Interpretation:
     """Normalize one fixture's raw evidence and build its schema-valid result record.
 
     `normalizer` is the runtime-specific normalizer module (defaults to the OpenAI one for
-    backward compatibility); it owns both usage extraction and event normalization for its
-    raw shape.
+    backward compatibility); it owns usage extraction, model-identity extraction, and event
+    normalization for its raw shape. `requested_model` and `execution_mode` come from the probe
+    manifest and drive the neutral model-identity summary (P0.6D); both are optional so existing
+    callers stay backward compatible.
     """
     nz = normalizer or _default_normalizer
     usage = _usage_block(nz.extract_usage(capture_kind, raw_obj), pricing)
     usage_source = getattr(nz, "USAGE_SOURCE", provenance.PROVIDER_NATIVE)
+    model_identity = _model_identity(
+        nz, capture_kind, raw_obj, requested_model, execution_mode, response_ref
+    )
 
     try:
         normalized = nz.normalize(capture_kind, raw_obj, raw_manifest_ref, response_ref)
@@ -211,7 +283,9 @@ def interpret(
         if errors:
             raise ValueError("; ".join(errors))
     except Exception as exc:  # noqa: BLE001 - normalization failure is a recorded outcome
-        # Raw evidence stays on disk; interpretation is INCONCLUSIVE, no retry.
+        # Raw evidence stays on disk; interpretation is INCONCLUSIVE, no retry. Model identity is
+        # still recorded: the requested model and any observed returned model are known from the
+        # manifest + raw artifact even when transcript normalization failed.
         result = _result(
             run_id=run_id,
             fixture_id=fixture_id,
@@ -221,6 +295,7 @@ def interpret(
             normalized_ref=None,
             usage=usage,
             notes=[f"normalization_failed: {exc}"],
+            model_identity=model_identity,
         )
         return Interpretation("INCONCLUSIVE", None, result, result["notes"])
 
@@ -235,5 +310,6 @@ def interpret(
         usage=usage,
         notes=notes,
         terminal_state=_terminal_state(normalized, usage_source),
+        model_identity=model_identity,
     )
     return Interpretation(status, normalized, result, notes)

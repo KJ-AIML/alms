@@ -14,6 +14,10 @@ NORMALIZED_SPEC = "alms.dev/normalized-transcript/v0"
 # OpenAI reports its own usage block: this lane's usage is provider-native.
 USAGE_SOURCE = provenance.PROVIDER_NATIVE
 
+# The served-model id is read from the native Responses object: provider-native under a LIVE
+# call. Offline evidence is downgraded to fixture_expected by the shared result builder.
+MODEL_IDENTITY_LIVE_SOURCE = provenance.PROVIDER_NATIVE
+
 # OpenAI native event type -> candidate audit event type.
 _EVENT_MAP = {
     "response.created": "response_started",
@@ -186,6 +190,27 @@ def extract_usage(capture_kind: str, raw_obj: object) -> dict | None:
             if isinstance(ev, dict) and ev.get("type") == "response.completed":
                 resp = (data or {}).get("response", {}) if isinstance(data, dict) else {}
                 return _summarize(resp.get("usage"))
+    return None
+
+
+def extract_model_identity(capture_kind: str, raw_obj: object) -> str | None:
+    """The served model id observed in native Responses evidence, or None if absent.
+
+    Read from the authoritative response object (top-level `model`), not from any convenience
+    projection. The exact string is preserved; absence stays absence (never the requested model).
+    """
+    if capture_kind == "response" and isinstance(raw_obj, dict):
+        return raw_obj.get("model")
+    if capture_kind == "stream" and isinstance(raw_obj, list):
+        model = None
+        for ev in raw_obj:
+            if not isinstance(ev, dict):
+                continue
+            data = ev.get("data") if isinstance(ev.get("data"), dict) else None
+            resp = data.get("response") if isinstance(data, dict) else None
+            if isinstance(resp, dict) and resp.get("model"):
+                model = resp["model"]  # last wins -> the completed event's served model
+        return model
     return None
 
 

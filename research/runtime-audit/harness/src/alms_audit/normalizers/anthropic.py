@@ -18,6 +18,10 @@ NORMALIZED_SPEC = "alms.dev/normalized-transcript/v0"
 # Anthropic reports its own usage block (incl. the cache split): provider-native.
 USAGE_SOURCE = provenance.PROVIDER_NATIVE
 
+# The served-model id is read from the native Message resource: provider-native under a LIVE
+# call. Offline evidence is downgraded to fixture_expected by the shared result builder.
+MODEL_IDENTITY_LIVE_SOURCE = provenance.PROVIDER_NATIVE
+
 
 def _evt(seq: int, etype: str, data: dict, raw_ref: str) -> dict:
     return {
@@ -68,6 +72,26 @@ def extract_usage(capture_kind: str, raw_obj: object) -> dict | None:
                 u = ev.get("usage") or {}
                 merged.update({k: v for k, v in u.items() if v is not None})
         return _summarize(merged or None)
+    return None
+
+
+def extract_model_identity(capture_kind: str, raw_obj: object) -> str | None:
+    """The served model id from the native Message, or None if absent.
+
+    Read from the native Message `model` field, not substituted from the requested model when the
+    field is missing. Exact string preserved; absence stays absence.
+    """
+    if not isinstance(raw_obj, dict):
+        return None
+    if capture_kind == "response":
+        return (raw_obj.get("message") or {}).get("model")
+    if capture_kind == "stream":
+        for item in raw_obj.get("events", []):
+            ev = item.get("event", {}) if isinstance(item, dict) else {}
+            if ev.get("type") == "message_start":
+                model = (ev.get("message") or {}).get("model")
+                if model:
+                    return model
     return None
 
 

@@ -11,6 +11,7 @@ import json
 
 import pytest
 
+from alms_audit import provenance
 from alms_audit.config import approved_fixtures, load_config_path, load_raw
 from alms_audit.fixtures import load_fixtures
 from alms_audit.lanes import load_lanes
@@ -27,6 +28,21 @@ _OPENAI_PROBE = default_root() / "probes" / "openai-native"
 _LANGCHAIN_PROBE = default_root() / "probes" / "langchain"
 _ANTHROPIC_PROBE = default_root() / "probes" / "anthropic-native"
 _GEMINI_PROBE = default_root() / "probes" / "gemini-native"
+
+
+def _assert_model_identity(result, requested):
+    """P0.6D four-lane regression: every offline result carries the neutral model-identity
+    contract (requested + observed-or-unavailable + central-vocab source + raw_ref-when-observed +
+    offline_mock execution mode)."""
+    mi = result["observed_model_identity"]
+    assert mi["requested_model"] == requested
+    assert mi["execution_mode"] == "offline_mock"
+    assert mi["observed_returned_model_source"] in provenance.MODEL_IDENTITY_SOURCES
+    if mi["observed_returned_model"] is not None:
+        assert mi["observed_returned_model_raw_ref"]  # raw ref required when observed present
+        assert mi["observed_returned_model_source"] == provenance.FIXTURE_EXPECTED  # offline
+    else:
+        assert mi["observed_returned_model_source"] == provenance.UNAVAILABLE
 
 
 def test_probe_id_derived_from_runtime_layer():
@@ -91,6 +107,7 @@ def test_full_offline_openai_simulation_all_six(corpus_root):
         assert "openai" in probe_resp["package_versions"]
         result = json.loads((fx_dir / "result.json").read_text("utf-8"))
         assert is_valid("result", result)
+        _assert_model_identity(result, _MODEL)
         # Existing normalizer behavior: OpenAI offline outcomes are PASS or PASS_WITH_EXTENSION.
         assert result["status"] in ("PASS", "PASS_WITH_EXTENSION")
         transcript = json.loads((fx_dir / "normalized-transcript.json").read_text("utf-8"))
@@ -151,6 +168,7 @@ def test_full_offline_langchain_simulation_all_six(corpus_root):
         assert probe_resp["retry_count_observed"] == 0  # measured, single attempt
         result = json.loads((fx_dir / "result.json").read_text("utf-8"))
         assert is_valid("result", result)
+        _assert_model_identity(result, _MODEL)
         transcript = json.loads((fx_dir / "normalized-transcript.json").read_text("utf-8"))
         assert is_valid("normalized-transcript", transcript)
 
@@ -223,6 +241,7 @@ def test_full_offline_anthropic_simulation_all_six(corpus_root):
         assert probe_resp["retry_count_observed"] == 0
         result = json.loads((fx_dir / "result.json").read_text("utf-8"))
         assert is_valid("result", result)
+        _assert_model_identity(result, _ANTHROPIC_MODEL)
         transcript = json.loads((fx_dir / "normalized-transcript.json").read_text("utf-8"))
         assert is_valid("normalized-transcript", transcript)
 
@@ -300,6 +319,7 @@ def test_full_offline_gemini_simulation_all_six(corpus_root):
         assert req["store"] is False
         result = json.loads((fx_dir / "result.json").read_text("utf-8"))
         assert is_valid("result", result)
+        _assert_model_identity(result, _GEMINI_MODEL)
         transcript = json.loads((fx_dir / "normalized-transcript.json").read_text("utf-8"))
         assert is_valid("normalized-transcript", transcript)
 

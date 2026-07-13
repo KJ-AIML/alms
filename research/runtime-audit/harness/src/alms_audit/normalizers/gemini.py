@@ -20,6 +20,11 @@ NORMALIZED_SPEC = "alms.dev/normalized-transcript/v0"
 # Gemini reports its own Interaction usage totals: provider-native.
 USAGE_SOURCE = provenance.PROVIDER_NATIVE
 
+# The served-model id is read from the full Interaction RESOURCE (interaction.model), never from
+# the output_text SDK convenience projection: provider-native under a LIVE call. Offline evidence
+# is downgraded to fixture_expected by the shared result builder.
+MODEL_IDENTITY_LIVE_SOURCE = provenance.PROVIDER_NATIVE
+
 
 def _evt(seq: int, etype: str, data: dict, raw_ref: str) -> dict:
     return {
@@ -63,6 +68,29 @@ def extract_usage(capture_kind: str, raw_obj: object) -> dict | None:
                 if ev.get("event_type") == "interaction.completed":
                     native = (ev.get("interaction") or {}).get("usage")
         return _map_usage(native)
+    return None
+
+
+def extract_model_identity(capture_kind: str, raw_obj: object) -> str | None:
+    """The served model id from the full Interaction resource, or None if absent.
+
+    Reads the native `interaction.model` field (the authoritative resource), NOT the output_text
+    convenience projection. Exact string preserved; absence stays absence (never the requested id).
+    """
+    if not isinstance(raw_obj, dict):
+        return None
+    if capture_kind == "response":
+        return (raw_obj.get("interaction") or {}).get("model")
+    if capture_kind == "stream":
+        reconstructed = (raw_obj.get("reconstructed") or {}).get("model")
+        if reconstructed:
+            return reconstructed
+        for item in raw_obj.get("events", []):
+            ev = item.get("event", {}) if isinstance(item, dict) else {}
+            if ev.get("event_type") == "interaction.completed":
+                model = (ev.get("interaction") or {}).get("model")
+                if model:
+                    return model
     return None
 
 

@@ -66,6 +66,26 @@ USAGE_SOURCES: frozenset[str] = frozenset(
     {PROVIDER_NATIVE, FRAMEWORK_NATIVE, LOCAL_ESTIMATE, UNAVAILABLE}
 )
 
+# Sources that may label an OBSERVED RETURNED MODEL identity (P0.6D, finding N-05).
+# A model id read from a native provider response is PROVIDER_NATIVE (live); a model id exposed
+# only through framework response metadata is FRAMEWORK_NATIVE (never provider-native merely
+# because the string resembles a provider model id); a model taken from an SDK convenience
+# projection rather than the authoritative resource is SDK_CONVENIENCE; an offline synthetic
+# (mock/fixture) value is FIXTURE_EXPECTED and must never be labelled provider/framework-native;
+# an unreported/absent value is UNAVAILABLE; a claim only a real call can settle is
+# UNVERIFIED_UNTIL_LIVE. The requested model is request-side configuration, not an observation,
+# so it never carries one of these.
+MODEL_IDENTITY_SOURCES: frozenset[str] = frozenset(
+    {
+        PROVIDER_NATIVE,
+        FRAMEWORK_NATIVE,
+        SDK_CONVENIENCE,
+        FIXTURE_EXPECTED,
+        UNAVAILABLE,
+        UNVERIFIED_UNTIL_LIVE,
+    }
+)
+
 
 def is_known(term: str) -> bool:
     """True if ``term`` is a recognized provenance category (fail closed on typos)."""

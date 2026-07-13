@@ -38,6 +38,34 @@
         "source": { "type": "string", "enum": ["provider_native", "framework_native", "unavailable"] }
       }
     },
+    "observed_model_identity": {
+      "type": ["object", "null"],
+      "$comment": "P0.6D additive (finding N-05). Cross-lane model identity provenance, made queryable at the result level WITHOUT inspecting provider-specific raw payloads. The requested model (request-side configuration) is kept strictly separate from the observed returned model (a response-side observation); the returned model is NEVER assumed equal to the requested model, and a framework-exposed model id is NEVER assumed provider-native. No canonicalization is applied: exact observed strings are preserved (no lowercasing, alias resolution, snapshot stripping, or family inference). A populated observed_returned_model MUST carry an observed_returned_model_raw_ref (enforced by if/then below) unless it is null/unavailable. model_identity_match is an EXACT-STRING comparison only (true/false/unknown) and does NOT interpret a mismatch as an error.",
+      "properties": {
+        "requested_model": { "type": ["string", "null"], "$comment": "The explicit configured/requested model id placed into the probe request (DevSpec Section 29 'configured model id'). Request-side evidence; never overwritten by response metadata." },
+        "observed_returned_model": { "type": ["string", "null"], "$comment": "A model id actually observed in response-side evidence. Optional: null when the selected API/lane exposed no returned model id (recorded as unavailable, never copied from the requested model)." },
+        "observed_returned_model_source": {
+          "type": "string",
+          "enum": [
+            "provider_native", "framework_native", "sdk_convenience", "probe_derived",
+            "normalizer_derived", "local_estimate", "fixture_expected", "unavailable",
+            "unverified_until_live"
+          ],
+          "$comment": "Centrally-owned provenance vocabulary (harness provenance.MODEL_IDENTITY_SOURCES). Offline synthetic evidence is fixture_expected; a live native provider field is provider_native; a live framework-metadata field is framework_native; absent is unavailable."
+        },
+        "observed_returned_model_raw_ref": { "type": ["string", "null"], "$comment": "Pointer to the raw artifact that contains the observed field. Required when observed_returned_model is populated; null only when the value is unavailable." },
+        "execution_mode": { "type": ["string", "null"], "enum": ["offline_mock", "live", null], "$comment": "Preserved alongside source: execution mode and source-provenance are related but distinct axes. Offline provider-shaped objects are fixture_expected, not real provider observations." },
+        "model_identity_match": { "type": "string", "enum": ["true", "false", "unknown"], "$comment": "Exact-string equality of requested vs observed. unknown when observed is unavailable or the requested model is unknown. Not an error signal." }
+      },
+      "if": {
+        "properties": { "observed_returned_model": { "type": "string" } },
+        "required": ["observed_returned_model"]
+      },
+      "then": {
+        "properties": { "observed_returned_model_raw_ref": { "type": "string", "minLength": 1 } },
+        "required": ["observed_returned_model_raw_ref"]
+      }
+    },
     "invariants": {
       "type": "array",
       "items": {
