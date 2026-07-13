@@ -18,9 +18,11 @@ _MODEL = "gpt-5.4-nano-2026-03-17"
 _OPENAI_PROBE = default_root() / "probes" / "openai-native"
 _LANGCHAIN_PROBE = default_root() / "probes" / "langchain"
 _ANTHROPIC_PROBE = default_root() / "probes" / "anthropic-native"
+_GEMINI_PROBE = default_root() / "probes" / "gemini-native"
 
 _venvs_present = (_OPENAI_PROBE / ".venv").exists() and (_LANGCHAIN_PROBE / ".venv").exists()
 _three_present = _venvs_present and (_ANTHROPIC_PROBE / ".venv").exists()
+_four_present = _three_present and (_GEMINI_PROBE / ".venv").exists()
 
 
 def _run_lane(corpus_root, lane_id, probe_dir, run_id, model=_MODEL):
@@ -119,3 +121,51 @@ def test_three_lane_diversity_comparison(corpus_root):
     an_stream_events = by_id["STREAM-001"]["by_lane"]["anthropic-native"]["extension_events"]
     assert an_stream_events["provider_extension"] >= 1
     assert an_stream_events["framework_extension"] == 0
+
+
+@pytest.mark.skipif(not _four_present, reason="all four probe venvs required")
+def test_four_lane_diversity_comparison(corpus_root):
+    oai = _run_lane(corpus_root, "openai-native", _OPENAI_PROBE, "d4-oai")
+    lc = _run_lane(corpus_root, "langchain-openai", _LANGCHAIN_PROBE, "d4-lc")
+    an = _run_lane(corpus_root, "anthropic-native", _ANTHROPIC_PROBE, "d4-an", model="claude-syn-x")
+    gm = _run_lane(corpus_root, "gemini-native", _GEMINI_PROBE, "d4-gm", model="gemini-syn-x")
+
+    report = compare_runs(
+        {
+            "openai-native": oai.run_dir,
+            "langchain": lc.run_dir,
+            "anthropic-native": an.run_dir,
+            "gemini-native": gm.run_dir,
+        },
+        _APPROVED,
+    )
+
+    assert report["disclaimer"] == DISCLAIMER
+    assert "not live provider semantic evidence" in report["disclaimer"]
+    assert set(report["lanes"]) == {
+        "openai-native",
+        "langchain",
+        "anthropic-native",
+        "gemini-native",
+    }
+    by_id = {f["fixture_id"]: f for f in report["fixtures"]}
+
+    gen = by_id["GEN-001"]["by_lane"]
+    assert gen["gemini-native"]["probe_id"] == "gemini-native"
+    assert gen["gemini-native"]["execution_mode"] == "offline_mock"
+
+    # Structured-output mechanisms across four lanes: three native JSON-schema mechanisms
+    # (OpenAI Responses json_schema, Anthropic output_config.format, Gemini response_format)
+    # versus LangChain's framework function_calling.
+    strategies = by_id["STR-001"]["structured_strategies"]
+    assert strategies["gemini-native"] == "response_format.text.json_schema"
+    assert strategies["langchain"] == "function_calling"
+    native = by_id["STR-001"]["native_json_schema_lanes"]
+    assert "gemini-native" in native and "anthropic-native" in native and "openai-native" in native
+    assert "langchain" not in native
+
+    # Gemini exposes a native Interactions step lifecycle (provider_extension) the others do not
+    # surface the same way; a framework label is never used for Gemini-native data.
+    gm_stream = by_id["STREAM-001"]["by_lane"]["gemini-native"]["extension_events"]
+    assert gm_stream["provider_extension"] >= 1
+    assert gm_stream["framework_extension"] == 0

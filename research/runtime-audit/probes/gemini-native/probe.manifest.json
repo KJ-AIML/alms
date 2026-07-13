@@ -1,0 +1,37 @@
+{
+  "audit_protocol_version": "alms.dev/probe-protocol/v0",
+  "probe_id": "gemini-native",
+  "runtime_layer": "google-genai",
+  "runtime_packages": ["google-genai==2.11.0"],
+  "api_surface": "google.genai Client.interactions.create (Gemini Interactions API; direct Gemini, not Vertex)",
+  "sdk_version": "google-genai 2.11.0",
+  "api_status": "GA: the Gemini Interactions API is Generally Available (since June 2026) and recommended by Google for new projects. In google-genai 2.11.0 it is exposed through google.genai.interactions; the public module re-exports generated types and resources implemented under internal _gaos modules (an SDK implementation detail, not the API's lifecycle). The 'Agents usage is experimental' warning is agent-specific (fires only from client.agents) and does NOT apply to model Interaction requests. Implementation risk: client.interactions.create and its generated request types must be revalidated when google-genai is upgraded. Offline evidence uses schema-validated native dictionaries with the SDK's real field names.",
+  "credential_env_vars": ["GEMINI_API_KEY"],
+  "configuration_keys": ["model", "timeout_ms", "max_output_tokens", "mock_mode"],
+  "claimed_feature_support": {
+    "note": "SDK operations implemented in this probe against Gemini Interactions-native shapes. A framework/SDK operation succeeding OFFLINE says nothing about live Gemini behavior or model support; both remain UNVERIFIED until a live run (DevSpec Section 55).",
+    "generation": "sdk_operation_implemented (interactions.create; model_output step + content parts)",
+    "roles": "sdk_operation_implemented (top-level system_instruction + user_input step, not a user message)",
+    "structured_output": "sdk_operation_implemented (native response_format text/application-json/jsonSchema; raw schema preserved; NOT a synthetic tool)",
+    "tools": "sdk_operation_implemented (native function tool; function_call step id/name/arguments captured; requires_action status)",
+    "streaming": "sdk_operation_implemented (native interaction.created/step.start/step.delta/step.stop/interaction.completed events captured in order)",
+    "usage": "sdk_operation_implemented (total_input/output/thought/cached token totals captured; absent stays absent)",
+    "errors": "sdk_operation_implemented (SDK exception type + cause chain + code/status captured)"
+  },
+  "model_support_status": "unverified_until_live",
+  "supported_modes": ["offline_mock", "live"],
+  "native_semantics_notes": [
+    "The system instruction is a TOP-LEVEL system_instruction, not a user-input message.",
+    "The authoritative response is the full Interaction resource (id/status/steps/usage); output_text is a separate SDK convenience projection.",
+    "store=false is set on EVERY request; previous_interaction_id is never used; each base fixture is stateless single-turn.",
+    "Thought steps / thought-signature deltas are preserved ONLY as opaque structural/protocol evidence; no hidden reasoning text is requested, normalized, or reported.",
+    "A function_call step yields status requires_action; P0.6B captures the first function-call step only and never submits a function result (no second provider turn)."
+  ],
+  "known_limitations": [
+    "No live evidence exists yet; all P0.6B verification is offline via a narrow injected fake returning native Interaction/event dictionaries without the network.",
+    "The Interactions API is GA; the generated Python types/resources (re-exported from internal _gaos) may evolve on SDK upgrade, so native dicts are used offline and client.interactions.create must be revalidated when google-genai is upgraded.",
+    "Multimodal, parallel tools, cancellation, timeout, retry, embeddings are out of P0.6B scope.",
+    "No Vertex mode, no ADC, no OpenRouter, no OpenAI-compat endpoint, no custom base_url; only a direct GEMINI_API_KEY satisfies the live credential gate."
+  ],
+  "run_command": "uv run --project probes/gemini-native python -m probe <request.json>"
+}

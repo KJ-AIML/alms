@@ -57,6 +57,7 @@ _PROBE_BY_RUNTIME = {
     "openai": "openai-native",
     "langchain": "langchain",
     "anthropic": "anthropic-native",
+    "google-genai": "gemini-native",
 }
 
 

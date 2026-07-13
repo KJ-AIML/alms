@@ -43,6 +43,8 @@ def _structured_mechanism(probe_id: str | None, strategy: str | None, has_struct
         return "framework_function_calling"
     if strategy == "output_config.format":
         return "native_json_schema (anthropic messages output_config.format)"
+    if strategy == "response_format.text.json_schema":
+        return "native_json_schema (gemini interactions response_format)"
     if probe_id == "openai-native":
         # The OpenAI probe requests native json_schema on the Responses API (text.format).
         return "native_json_schema (openai responses api)"
