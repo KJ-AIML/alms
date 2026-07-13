@@ -21,6 +21,7 @@ SCHEMA_FILES: dict[str, str] = {
     "result": "result.schema.json",
     "finding": "finding.schema.json",
     "run-manifest": "run-manifest.schema.json",
+    "protocol-neutrality-matrix": "protocol-neutrality-matrix.schema.json",
 }
 
 

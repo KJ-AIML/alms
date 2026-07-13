@@ -1,0 +1,188 @@
+{
+  "spec": "alms.dev/protocol-neutrality-matrix/v0",
+  "generated_offline": true,
+  "disclaimer": "P0.6C cross-lane protocol-neutrality matrix. Derived from offline-mock evidence and code review against installed SDK/framework shapes and current schema behavior. It is implementation-shape evidence only, NOT live provider semantic evidence, and NOT the ALMS runtime contract. No live provider request was made during P0.6C.",
+  "provenance_vocabulary": [
+    "provider_native",
+    "framework_native",
+    "sdk_convenience",
+    "probe_derived",
+    "normalizer_derived",
+    "local_estimate",
+    "fixture_expected",
+    "unavailable",
+    "unverified_until_live"
+  ],
+  "lanes": ["openai-native", "langchain", "anthropic-native", "gemini-native"],
+  "fixture_coverage": {
+    "openai-native": {
+      "fixtures": ["GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001", "USAGE-001"],
+      "execution": "offline_mock via real openai-native probe subprocess (CLI -> planner -> runner -> probe subprocess -> raw -> OpenAI normalizer -> results -> summary); zero provider calls / network / credential.",
+      "evidence": "harness/tests/test_lane_dispatch.py::test_full_offline_openai_simulation_all_six; also test_compare.py::test_four_lane_diversity_comparison"
+    },
+    "langchain": {
+      "fixtures": ["GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001", "USAGE-001"],
+      "execution": "offline_mock via real langchain probe subprocess; zero provider calls / network / credential.",
+      "evidence": "harness/tests/test_lane_dispatch.py::test_full_offline_langchain_simulation_all_six; also test_compare.py::test_four_lane_diversity_comparison"
+    },
+    "anthropic-native": {
+      "fixtures": ["GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001", "USAGE-001"],
+      "execution": "offline_mock via real anthropic-native probe subprocess; zero provider calls / network / credential.",
+      "evidence": "harness/tests/test_lane_dispatch.py::test_full_offline_anthropic_simulation_all_six; also test_compare.py::test_four_lane_diversity_comparison"
+    },
+    "gemini-native": {
+      "fixtures": ["GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001", "USAGE-001"],
+      "execution": "offline_mock via real gemini-native probe subprocess; store=false on every request; zero provider calls / network / credential.",
+      "evidence": "harness/tests/test_lane_dispatch.py::test_full_offline_gemini_simulation_all_six; also test_compare.py::test_four_lane_diversity_comparison"
+    }
+  },
+  "findings": [
+    {
+      "id": "N-01",
+      "severity": "F1",
+      "dimension": "usage",
+      "summary": "results._usage_block hardcoded provenance=reported for all present usage, so LangChain framework-normalized usage_metadata was indistinguishable from provider-reported usage.",
+      "status": "resolved_offline"
+    },
+    {
+      "id": "N-02",
+      "severity": "F1",
+      "dimension": "usage",
+      "summary": "results._usage_block read only OpenAI-nested cache/reasoning paths, so Anthropic cache_creation/cache_read and LangChain input_token_details tokens were dropped to null in the result summary; the result schema had no cache-creation/cache-read split.",
+      "status": "resolved_offline"
+    },
+    {
+      "id": "N-03",
+      "severity": "F2",
+      "dimension": "terminal_state",
+      "summary": "Native provider/framework terminal states (requires_action, incomplete, budget_exceeded, refusal, stop_reason, finish_reason) were preserved only inside the transcript and collapsed to PASS/PASS_WITH_EXTENSION at the result level, with no queryable native-terminal field.",
+      "status": "resolved_offline"
+    },
+    {
+      "id": "N-04",
+      "severity": "F2",
+      "dimension": "provenance",
+      "summary": "No centrally-owned provenance vocabulary existed; provider-vs-framework and reported-vs-estimated distinctions were expressed only by scattered signals.",
+      "status": "resolved_offline"
+    },
+    {
+      "id": "N-05",
+      "severity": "F3",
+      "dimension": "request_representation",
+      "summary": "probe-response.model holds the requested/configured model id; the provider-returned served model was preserved only in the raw response artifact, with no first-class returned-model field.",
+      "status": "proposed"
+    }
+  ],
+  "dimensions": [
+    {
+      "dimension": "request_representation",
+      "description": "System instruction placement, message/input/step shape, model identity, output-token limit, timeout/retry ownership. Requested model kept separate from provider-returned (raw preserves returned; provider_returned_model added as optional).",
+      "by_lane": {
+        "openai-native": { "representation": "Responses API input list + instructions; requested model on probe-response.model; provider-returned model in raw response.", "provenance": "provider_native", "preserved": "preserved", "notes": "output-token limit + timeout/retry owned by probe controls (probe_derived)." },
+        "langchain": { "representation": "framework message objects -> provider request; requested model recorded exactly, never defaulted.", "provenance": "framework_native", "preserved": "preserved", "notes": "framework mediates request shaping; retry ownership is framework-internal (retry_count_observed may be null)." },
+        "anthropic-native": { "representation": "Messages API top-level system + messages; requested model on probe-response.model.", "provenance": "provider_native", "preserved": "preserved", "notes": "system is a separate top-level field, not a message role." },
+        "gemini-native": { "representation": "Interactions API top-level system_instruction + user_input step; store=false always; no previous_interaction_id.", "provenance": "provider_native", "preserved": "preserved", "notes": "requested model on manifest; provider-returned model kept separately on the Interaction (N-05)." }
+      }
+    },
+    {
+      "dimension": "response_containers",
+      "description": "Authoritative raw container vs SDK convenience projection. Normalizers read authoritative structures (items/content-blocks/steps/messages), never convenience accessors.",
+      "by_lane": {
+        "openai-native": { "representation": "response.output items (message/function_call); output_text is a convenience projection not relied upon.", "provenance": "provider_native", "preserved": "preserved", "notes": "output_text would be sdk_convenience; normalizer uses output items." },
+        "langchain": { "representation": "AIMessage / AIMessageChunk; concrete framework types stay inside event data, never exposed as audit event types.", "provenance": "framework_native", "preserved": "preserved", "notes": "DevSpec Section 48 special rule honored." },
+        "anthropic-native": { "representation": "Message content blocks (text/tool_use/unknown).", "provenance": "provider_native", "preserved": "preserved", "notes": "unknown block types preserved verbatim as provider_extension." },
+        "gemini-native": { "representation": "Interaction resource + chronological steps; output_text convenience projection not relied upon.", "provenance": "provider_native", "preserved": "preserved", "notes": "step-based container, not item-based; retained not reshaped to items." }
+      }
+    },
+    {
+      "dimension": "structured_output",
+      "description": "Native JSON-schema vs framework-mediated strategy vs tool extraction. schema-valid text alone is NOT native-structured proof.",
+      "by_lane": {
+        "openai-native": { "representation": "native json_schema (Responses API text.format).", "provenance": "provider_native", "preserved": "preserved", "notes": "parsed value + validation outcome kept distinct from raw text." },
+        "langchain": { "representation": "framework function_calling strategy (offline mock selection).", "provenance": "framework_native", "preserved": "preserved", "notes": "classified framework_function_calling, never native_json_schema." },
+        "anthropic-native": { "representation": "native json_schema (Messages output_config.format).", "provenance": "provider_native", "preserved": "preserved", "notes": "strategy=output_config.format." },
+        "gemini-native": { "representation": "native response_format (text.jsonSchema).", "provenance": "provider_native", "preserved": "preserved", "notes": "strategy=response_format.text.json_schema; not a synthetic tool." }
+      }
+    },
+    {
+      "dimension": "tool_semantics",
+      "description": "Function calls / tool-use blocks / function-call steps. Distinct provider call IDs kept distinct; parallel execution never inferred; raw arguments preserved.",
+      "by_lane": {
+        "openai-native": { "representation": "function_call output item + call_id; tool_call_started/completed.", "provenance": "provider_native", "preserved": "preserved", "notes": "provider call_id retained." },
+        "langchain": { "representation": "message.tool_calls with framework-generated ids; args preserved raw.", "provenance": "framework_native", "preserved": "preserved", "notes": "framework ids marked distinct from provider call ids in data." },
+        "anthropic-native": { "representation": "tool_use content block id/name/input.", "provenance": "provider_native", "preserved": "preserved", "notes": "multiple tool_use blocks -> multiple distinct tool_call_completed, not merged." },
+        "gemini-native": { "representation": "function_call step id/name/arguments; requires_action when a call awaits result.", "provenance": "provider_native", "preserved": "preserved", "notes": "requires_action is a native non-terminal state, kept as provider_extension." }
+      }
+    },
+    {
+      "dimension": "streaming",
+      "description": "Provider event types / item / content-block / Interaction-step lifecycles / framework chunks. Unknown events preserved; ordering kept; live event delivery unverified offline.",
+      "by_lane": {
+        "openai-native": { "representation": "response.* item stream events; unknown -> provider_extension.", "provenance": "provider_native", "preserved": "unverified_until_live", "notes": "offline mock lifecycle preserved; real event stream unverified_until_live." },
+        "langchain": { "representation": "AIMessageChunk stream; synthesized terminal chunk -> framework_extension.", "provenance": "framework_native", "preserved": "unverified_until_live", "notes": "framework chunks never labelled provider events." },
+        "anthropic-native": { "representation": "message/content_block lifecycle (start/delta/stop) + ping; block lifecycle -> provider_extension.", "provenance": "provider_native", "preserved": "unverified_until_live", "notes": "content-block lifecycle retained, not collapsed." },
+        "gemini-native": { "representation": "interaction.created/step.start/step.delta/step.stop/interaction.completed; unknown -> provider_extension.", "provenance": "provider_native", "preserved": "unverified_until_live", "notes": "Interaction step lifecycle retained; thought_signature_delta structural-only." }
+      }
+    },
+    {
+      "dimension": "usage",
+      "description": "Input/output/cached/cache-creation/cache-read/reasoning-thought/total tokens; provider-reported vs framework-normalized; missing usage stays null. Hardened by N-01/N-02.",
+      "by_lane": {
+        "openai-native": { "representation": "provider usage block; cache_read from input_tokens_details, reasoning from output_tokens_details.", "provenance": "provider_native", "preserved": "preserved", "notes": "source=provider_native; no cache-creation split reported (stays null)." },
+        "langchain": { "representation": "framework usage_metadata (input_token_details/output_token_details).", "provenance": "framework_native", "preserved": "preserved", "notes": "source=framework_native (N-01 fix): no longer indistinguishable from provider-reported." },
+        "anthropic-native": { "representation": "provider usage with cache_creation_input_tokens + cache_read_input_tokens split.", "provenance": "provider_native", "preserved": "preserved", "notes": "both cache halves now survive into the result summary (N-02 fix); no total reported (null)." },
+        "gemini-native": { "representation": "Interaction usage totals incl total_cached_tokens + total_thought_tokens.", "provenance": "provider_native", "preserved": "preserved", "notes": "thought->reasoning_tokens documented mapping; cache read preserved." }
+      }
+    },
+    {
+      "dimension": "cost",
+      "description": "Reported vs locally estimated cost, kept distinct.",
+      "by_lane": {
+        "openai-native": { "representation": "no provider dollar cost; cost_estimated from pricing snapshot when priced.", "provenance": "local_estimate", "preserved": "preserved", "notes": "cost_reported null; estimate != billed." },
+        "langchain": { "representation": "same local estimate path; token base is framework-normalized.", "provenance": "local_estimate", "preserved": "preserved", "notes": "estimate provenance separate from usage source." },
+        "anthropic-native": { "representation": "no provider dollar cost; cost_estimated when priced.", "provenance": "local_estimate", "preserved": "preserved", "notes": "cost_reported null." },
+        "gemini-native": { "representation": "no provider dollar cost; cost_estimated when priced.", "provenance": "local_estimate", "preserved": "preserved", "notes": "cost_reported null." }
+      }
+    },
+    {
+      "dimension": "terminal_state",
+      "description": "Provider/framework terminal signal made queryable at result level via observed_terminal_state (N-03). Different axis from the audit status verdict.",
+      "by_lane": {
+        "openai-native": { "representation": "response.status (completed/incomplete) -> observed_terminal_state.", "provenance": "provider_native", "preserved": "preserved", "notes": "native string kept; category mapped." },
+        "langchain": { "representation": "response_metadata.finish_reason -> observed_terminal_state.", "provenance": "framework_native", "preserved": "preserved", "notes": "source=framework_native; finish_reason is framework-normalized." },
+        "anthropic-native": { "representation": "stop_reason (end_turn/max_tokens/refusal/...) -> observed_terminal_state.", "provenance": "provider_native", "preserved": "preserved", "notes": "refusal category distinct." },
+        "gemini-native": { "representation": "Interaction status (completed/incomplete/requires_action/budget_exceeded/...) -> observed_terminal_state.", "provenance": "provider_native", "preserved": "preserved", "notes": "unknown native status kept verbatim, category unknown; no data loss." }
+      }
+    },
+    {
+      "dimension": "extensions",
+      "description": "Provider-native vs framework extension handling. Native-but-unmapped semantics become provider_extension; framework transformations become framework_extension; the two are never conflated (results._derive_status; DevSpec Sections 31, 43, 48).",
+      "by_lane": {
+        "openai-native": { "representation": "unknown native item/stream events -> provider_extension; refusal -> provider_extension; no framework_extension.", "provenance": "provider_native", "preserved": "preserved", "notes": "framework_extension count is 0 for a native lane." },
+        "langchain": { "representation": "synthesized stream chunks + framework message metadata (additional_kwargs/invalid_tool_calls) -> framework_extension; never provider_extension.", "provenance": "framework_native", "preserved": "preserved", "notes": "a framework transformation is never labelled provider-native." },
+        "anthropic-native": { "representation": "content-block lifecycle (start/stop), ping, refusal, unknown blocks -> provider_extension; no framework_extension.", "provenance": "provider_native", "preserved": "preserved", "notes": "provider-native block lifecycle retained." },
+        "gemini-native": { "representation": "Interaction step lifecycle, thought step/signature, requires_action, unknown native events -> provider_extension; no framework_extension.", "provenance": "provider_native", "preserved": "preserved", "notes": "google-genai is the provider SDK, so its unknowns are provider_extension, not framework_extension." }
+      }
+    },
+    {
+      "dimension": "state_and_privacy",
+      "description": "Server-side storage, state identifiers, thought signatures, credential presence. Booleans-only credential presence; opaque signatures never expanded to text.",
+      "by_lane": {
+        "openai-native": { "representation": "stateless request; response id in raw; no store reuse.", "provenance": "provider_native", "preserved": "preserved", "notes": "run manifest records credential presence booleans only." },
+        "langchain": { "representation": "stateless framework call; provider request id preserved in raw/error.", "provenance": "framework_native", "preserved": "preserved", "notes": "no server-state reuse." },
+        "anthropic-native": { "representation": "stateless Messages request; request_id in raw.", "provenance": "provider_native", "preserved": "preserved", "notes": "no conversation state." },
+        "gemini-native": { "representation": "store=false on every request; no previous_interaction_id; thought_signature kept as presence bool only.", "provenance": "provider_native", "preserved": "preserved", "notes": "storage policy explicit; thought signature opaque, never reasoning text." }
+      }
+    },
+    {
+      "dimension": "errors_and_terminal_faults",
+      "description": "Provider vs framework vs runtime error; timeout/cancellation is client-side action, not proof provider stopped.",
+      "by_lane": {
+        "openai-native": { "representation": "provider error envelope (exception_type/status_code/request_id) -> error event.", "provenance": "provider_native", "preserved": "preserved", "notes": "ERROR_RUNTIME distinct from UNSUPPORTED." },
+        "langchain": { "representation": "framework_error envelope with provider_status_code/provider_request_id preserved.", "provenance": "framework_native", "preserved": "preserved", "notes": "framework exception type distinguished from provider cause." },
+        "anthropic-native": { "representation": "provider_error envelope with cause_chain.", "provenance": "provider_native", "preserved": "preserved", "notes": "native cause preserved before generic categorization." },
+        "gemini-native": { "representation": "provider_error envelope (exception_type/cause_chain/code/status/request_id).", "provenance": "provider_native", "preserved": "preserved", "notes": "errorevent stream events preserved; timeout/cancel recorded as client-side action only." }
+      }
+    }
+  ]
+}

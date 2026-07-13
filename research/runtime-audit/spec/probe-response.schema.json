@@ -21,7 +21,11 @@
       "additionalProperties": { "type": "string" }
     },
     "provider": { "type": "string", "minLength": 1 },
-    "model": { "type": "string", "minLength": 1 },
+    "model": { "type": "string", "minLength": 1, "$comment": "The REQUESTED / configured model id (DevSpec Section 29, 'configured model id'). The provider-returned served model, when it differs, is preserved in the raw response artifact and, when the probe surfaces it, in provider_returned_model." },
+    "provider_returned_model": {
+      "type": ["string", "null"],
+      "$comment": "P0.6C additive, optional. The returned/served model id observed for this run (may differ from the requested id, e.g. a dated snapshot). null when the probe cannot surface it; the raw response artifact remains the authoritative source. Kept distinct so requested and returned models are never conflated. This field does NOT assert the returned model's provenance: for a native lane the value may be provider-read, but for a framework lane a model exposed through framework response metadata is framework-mediated and must NOT be assumed provider-native. The deferred model-identity work (N-05) adds the requested/observed_returned/source/raw_reference distinction before any lane populates this."
+    },
     "started_at": { "type": "string", "format": "date-time" },
     "ended_at": { "type": "string", "format": "date-time" },
     "exit_code": { "type": "integer" },

@@ -139,9 +139,14 @@ def test_stream_lifecycle_and_ping_are_provider_extension_not_framework():
     assert "framework_extension" not in types  # a provider-native event is NOT a framework one
     assert types[-1] == "response_completed"
     assert is_valid("normalized-transcript", out)
-    # merged usage: input from message_start, output from message_delta
+    # merged usage: input from message_start, output from message_delta. Neutral summary shape;
+    # Anthropic usage is provider-native and reports no total/reasoning here (stays null, not 0).
     usage = nz.extract_usage("stream", env)
-    assert usage == {"input_tokens": 9, "output_tokens": 5}
+    assert usage["input_tokens"] == 9
+    assert usage["output_tokens"] == 5
+    assert usage["total_tokens"] is None
+    assert usage["reasoning_tokens"] is None
+    assert usage["source"] == "provider_native"
 
 
 def test_error_envelope_preserves_status_and_cause_chain():

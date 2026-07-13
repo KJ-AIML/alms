@@ -13,7 +13,12 @@ usage event data. Every event carries a raw_ref.
 
 from __future__ import annotations
 
+from .. import provenance
+
 NORMALIZED_SPEC = "alms.dev/normalized-transcript/v0"
+
+# Gemini reports its own Interaction usage totals: provider-native.
+USAGE_SOURCE = provenance.PROVIDER_NATIVE
 
 
 def _evt(seq: int, etype: str, data: dict, raw_ref: str) -> dict:
@@ -27,17 +32,21 @@ def _evt(seq: int, etype: str, data: dict, raw_ref: str) -> dict:
 
 
 def _map_usage(native: dict | None) -> dict | None:
-    """Map Gemini usage totals to the shared token names for the result summary. The native
-    object is preserved separately in the usage_updated event and the raw artifact; mapping
-    here is normalization, not raw reshaping (DevSpec: normalization may map usage)."""
+    """Map Gemini's native Interaction usage totals to the neutral usage summary (result-summary
+    only). thought tokens are surfaced as reasoning_tokens (a documented normalization); cache
+    reads map to cache_read (Gemini exposes no cache-creation split here). The native object is
+    preserved verbatim in the transcript usage_updated event and the raw artifact; mapping here
+    is normalization, not raw reshaping (DevSpec Section 43: normalization may map usage)."""
     if not native:
         return None
     return {
         "input_tokens": native.get("total_input_tokens"),
         "output_tokens": native.get("total_output_tokens"),
         "total_tokens": native.get("total_tokens"),
-        "input_tokens_details": {"cached_tokens": native.get("total_cached_tokens")},
-        "output_tokens_details": {"reasoning_tokens": native.get("total_thought_tokens")},
+        "cache_read_input_tokens": native.get("total_cached_tokens"),
+        "cache_creation_input_tokens": None,
+        "reasoning_tokens": native.get("total_thought_tokens"),
+        "source": USAGE_SOURCE,
     }
 
 

@@ -10,7 +10,13 @@ as an audit event type; concrete framework types stay inside event `data`.
 
 from __future__ import annotations
 
+from .. import provenance
+
 NORMALIZED_SPEC = "alms.dev/normalized-transcript/v0"
+
+# LangChain's usage_metadata is a FRAMEWORK-normalized figure, not the provider's own usage
+# block. It must never be labelled provider-native.
+USAGE_SOURCE = provenance.FRAMEWORK_NATIVE
 
 
 def _evt(seq: int, etype: str, data: dict, raw_ref: str) -> dict:
@@ -23,18 +29,42 @@ def _evt(seq: int, etype: str, data: dict, raw_ref: str) -> dict:
     }
 
 
+def _summarize(usage: dict | None) -> dict | None:
+    """Map LangChain's framework usage_metadata to the neutral usage summary (result-summary
+    only), tagged framework_native so it is never mistaken for a provider-reported figure.
+
+    usage_metadata nests cache/reasoning under input_token_details / output_token_details
+    (singular 'token'), distinct from any provider's raw block. The native object is preserved
+    verbatim in the transcript usage_updated event.
+    """
+    if not usage:
+        return None
+    in_details = usage.get("input_token_details") or {}
+    out_details = usage.get("output_token_details") or {}
+    return {
+        "input_tokens": usage.get("input_tokens"),
+        "output_tokens": usage.get("output_tokens"),
+        "total_tokens": usage.get("total_tokens"),
+        "cache_read_input_tokens": in_details.get("cache_read"),
+        "cache_creation_input_tokens": in_details.get("cache_creation"),
+        "reasoning_tokens": out_details.get("reasoning"),
+        "source": USAGE_SOURCE,
+    }
+
+
 def extract_usage(capture_kind: str, raw_obj: object) -> dict | None:
-    """LangChain usage_metadata, or None when absent (absent stays absent, never 0).
+    """Framework usage_metadata summary, or None when absent (absent stays absent, never 0).
 
     Note: this is the framework's usage_metadata shape, not the provider's raw usage block;
-    the two are recorded as distinct facts and are not assumed byte-identical.
+    the two are recorded as distinct facts (source=framework_native) and are not assumed
+    byte-identical.
     """
     if not isinstance(raw_obj, dict):
         return None
     if capture_kind == "response":
-        return (raw_obj.get("message") or {}).get("usage_metadata")
+        return _summarize((raw_obj.get("message") or {}).get("usage_metadata"))
     if capture_kind == "stream":
-        return (raw_obj.get("final_message") or {}).get("usage_metadata")
+        return _summarize((raw_obj.get("final_message") or {}).get("usage_metadata"))
     return None
 
 

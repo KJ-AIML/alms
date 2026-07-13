@@ -34,7 +34,10 @@ def test_usage_metadata_maps_to_usage_updated():
     env = _response_envelope({"content": "x", "usage_metadata": {"input_tokens": 3}})
     out = nz.normalize_response(env, "m.json", "raw/r.json")
     assert any(e["type"] == "usage_updated" for e in out["events"])
-    assert nz.extract_usage("response", env) == {"input_tokens": 3}
+    # Neutral summary shape; LangChain usage_metadata is FRAMEWORK-normalized, not provider-native.
+    usage = nz.extract_usage("response", env)
+    assert usage["input_tokens"] == 3
+    assert usage["source"] == "framework_native"
 
 
 def test_missing_usage_extracts_none():

@@ -7,7 +7,12 @@ provider_extension events rather than discarded. Every emitted event carries a r
 
 from __future__ import annotations
 
+from .. import provenance
+
 NORMALIZED_SPEC = "alms.dev/normalized-transcript/v0"
+
+# OpenAI reports its own usage block: this lane's usage is provider-native.
+USAGE_SOURCE = provenance.PROVIDER_NATIVE
 
 # OpenAI native event type -> candidate audit event type.
 _EVENT_MAP = {
@@ -149,16 +154,38 @@ def _looks_json(text: str | None) -> bool:
     return bool(text) and text.strip().startswith("{")
 
 
+def _summarize(usage: dict | None) -> dict | None:
+    """Map OpenAI's native usage block to the neutral usage summary (result-summary only).
+
+    The native object is preserved verbatim in the transcript usage_updated event; this summary
+    feeds only the result record. cache-creation has no OpenAI Responses equivalent, so it stays
+    null rather than being invented.
+    """
+    if not usage:
+        return None
+    details_in = usage.get("input_tokens_details") or {}
+    details_out = usage.get("output_tokens_details") or {}
+    return {
+        "input_tokens": usage.get("input_tokens"),
+        "output_tokens": usage.get("output_tokens"),
+        "total_tokens": usage.get("total_tokens"),
+        "cache_read_input_tokens": details_in.get("cached_tokens"),
+        "cache_creation_input_tokens": None,
+        "reasoning_tokens": details_out.get("reasoning_tokens"),
+        "source": USAGE_SOURCE,
+    }
+
+
 def extract_usage(capture_kind: str, raw_obj: object) -> dict | None:
-    """Provider-reported usage, or None when the provider did not report any (never 0)."""
+    """Provider-reported usage summary, or None when the provider reported none (never 0)."""
     if capture_kind == "response" and isinstance(raw_obj, dict):
-        return raw_obj.get("usage")
+        return _summarize(raw_obj.get("usage"))
     if capture_kind == "stream" and isinstance(raw_obj, list):
         for ev in raw_obj:
             data = ev.get("data") if isinstance(ev, dict) else None
             if isinstance(ev, dict) and ev.get("type") == "response.completed":
                 resp = (data or {}).get("response", {}) if isinstance(data, dict) else {}
-                return resp.get("usage")
+                return _summarize(resp.get("usage"))
     return None
 
 

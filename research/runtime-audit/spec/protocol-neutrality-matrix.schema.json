@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "alms.dev/protocol-neutrality-matrix/v0",
+  "title": "Protocol Neutrality Matrix v0",
+  "$comment": "AUDIT INFRASTRUCTURE ONLY (P0.6C). A machine-readable cross-lane record of HOW each implemented lane's native evidence is represented and with what provenance, per neutrality dimension. It is derived from offline evidence + code review; it is NOT live provider semantic evidence and is NOT the ALMS runtime contract. generated_offline MUST be true for any artifact produced during Phase 0 offline work.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["spec", "generated_offline", "disclaimer", "provenance_vocabulary", "lanes", "dimensions"],
+  "properties": {
+    "spec": { "const": "alms.dev/protocol-neutrality-matrix/v0" },
+    "generated_offline": { "const": true },
+    "disclaimer": { "type": "string", "minLength": 1 },
+    "provenance_vocabulary": {
+      "type": "array",
+      "minItems": 9,
+      "items": {
+        "type": "string",
+        "enum": [
+          "provider_native", "framework_native", "sdk_convenience", "probe_derived",
+          "normalizer_derived", "local_estimate", "fixture_expected", "unavailable",
+          "unverified_until_live"
+        ]
+      },
+      "$comment": "The full audit provenance vocabulary the matrix asserts the system can distinguish."
+    },
+    "lanes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "fixture_coverage": {
+      "type": "object",
+      "$comment": "Per-lane record that the lane was exercised over the base fixture set through the full real probe-subprocess path in offline mock mode. Names the evidencing test/run so coverage is auditable, not asserted.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fixtures", "execution", "evidence"],
+        "properties": {
+          "fixtures": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+          "execution": { "type": "string", "minLength": 1 },
+          "evidence": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "severity", "dimension", "summary"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "severity": { "type": "string", "enum": ["F0", "F1", "F2", "F3", "F4"] },
+          "dimension": { "type": "string", "minLength": 1 },
+          "summary": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["proposed", "under_review", "accepted", "rejected", "resolved_offline"] }
+        }
+      }
+    },
+    "dimensions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dimension", "by_lane"],
+        "properties": {
+          "dimension": { "type": "string", "minLength": 1 },
+          "description": { "type": "string" },
+          "by_lane": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["representation", "provenance", "preserved"],
+              "properties": {
+                "representation": { "type": "string", "minLength": 1 },
+                "provenance": {
+                  "type": "string",
+                  "enum": [
+                    "provider_native", "framework_native", "sdk_convenience", "probe_derived",
+                    "normalizer_derived", "local_estimate", "fixture_expected", "unavailable",
+                    "unverified_until_live"
+                  ]
+                },
+                "preserved": {
+                  "type": "string",
+                  "enum": ["preserved", "lossy", "not_applicable", "unverified_until_live"],
+                  "$comment": "Whether the native semantic survives into the audit corpus (raw + transcript + result). lossy marks a data-loss finding."
+                },
+                "notes": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

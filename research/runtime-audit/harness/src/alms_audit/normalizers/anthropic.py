@@ -11,7 +11,12 @@ carries a raw_ref.
 
 from __future__ import annotations
 
+from .. import provenance
+
 NORMALIZED_SPEC = "alms.dev/normalized-transcript/v0"
+
+# Anthropic reports its own usage block (incl. the cache split): provider-native.
+USAGE_SOURCE = provenance.PROVIDER_NATIVE
 
 
 def _evt(seq: int, etype: str, data: dict, raw_ref: str) -> dict:
@@ -24,17 +29,33 @@ def _evt(seq: int, etype: str, data: dict, raw_ref: str) -> dict:
     }
 
 
-def extract_usage(capture_kind: str, raw_obj: object) -> dict | None:
-    """Provider-reported usage (native Anthropic shape incl. cache fields), or None if absent.
+def _summarize(usage: dict | None) -> dict | None:
+    """Map Anthropic's native usage to the neutral usage summary (result-summary only).
 
-    Absent stays absent (never 0). Cache tokens are kept under their native keys so they stay
-    distinguishable from ordinary input usage; they are not reshaped into another provider's
-    field names.
+    Anthropic reports a two-field cache split (creation vs read) and no total or reasoning
+    tokens. The split is preserved under the shared cache_read/cache_creation names instead of
+    being collapsed into a single OpenAI-shaped cached figure; absent fields stay null (not 0).
+    The native object is preserved verbatim in the transcript usage_updated event.
     """
+    if not usage:
+        return None
+    return {
+        "input_tokens": usage.get("input_tokens"),
+        "output_tokens": usage.get("output_tokens"),
+        "total_tokens": usage.get("total_tokens"),  # Anthropic does not report a total: stays null
+        "cache_read_input_tokens": usage.get("cache_read_input_tokens"),
+        "cache_creation_input_tokens": usage.get("cache_creation_input_tokens"),
+        "reasoning_tokens": None,  # not reported in the Anthropic usage block
+        "source": USAGE_SOURCE,
+    }
+
+
+def extract_usage(capture_kind: str, raw_obj: object) -> dict | None:
+    """Provider-reported usage summary, or None if absent (absent stays absent, never 0)."""
     if not isinstance(raw_obj, dict):
         return None
     if capture_kind == "response":
-        return (raw_obj.get("message") or {}).get("usage")
+        return _summarize((raw_obj.get("message") or {}).get("usage"))
     if capture_kind == "stream":
         # Anthropic splits usage across events: input on message_start, output on message_delta.
         merged: dict = {}
@@ -46,7 +67,7 @@ def extract_usage(capture_kind: str, raw_obj: object) -> dict | None:
             elif ev.get("type") == "message_delta":
                 u = ev.get("usage") or {}
                 merged.update({k: v for k, v in u.items() if v is not None})
-        return merged or None
+        return _summarize(merged or None)
     return None
 
 
