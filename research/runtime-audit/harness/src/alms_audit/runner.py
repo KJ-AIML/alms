@@ -53,7 +53,11 @@ BLOCK_NETWORK_ENV = "ALMS_PROBE_BLOCK_NETWORK"
 
 # Each lane's runtime layer maps to the isolated probe project that owns that runtime's SDK.
 # A lane never launches another lane's probe env (DevSpec Sections 20, 25, 29).
-_PROBE_BY_RUNTIME = {"openai": "openai-native", "langchain": "langchain"}
+_PROBE_BY_RUNTIME = {
+    "openai": "openai-native",
+    "langchain": "langchain",
+    "anthropic": "anthropic-native",
+}
 
 
 def _probe_id_for_lane(lane: dict) -> str:
@@ -231,14 +235,18 @@ def _run_execution(
         pricing=pricing,
     )
 
-    # Cost + call-cap gates derive from the planner's expected call count (no second counter).
-    gate_cost(
-        pricing,
-        model_id=model,
-        expected_calls=plan.expected_call_count,
-        hard_cap_usd=config.hard_cap_usd,
-    )
-    budget_mod.check_call_cap(plan.expected_call_count, config)
+    # Cost + call-cap gates bound LIVE provider spend and derive from the planner's expected
+    # call count (no second counter). Offline mock makes ZERO provider calls, so they do not
+    # apply there — this lets a lane without a committed pricing snapshot still be exercised
+    # offline. The live path is unchanged and still fully gated.
+    if live:
+        gate_cost(
+            pricing,
+            model_id=model,
+            expected_calls=plan.expected_call_count,
+            hard_cap_usd=config.hard_cap_usd,
+        )
+        budget_mod.check_call_cap(plan.expected_call_count, config)
 
     run_dir.mkdir(parents=True)
     started = now_iso()

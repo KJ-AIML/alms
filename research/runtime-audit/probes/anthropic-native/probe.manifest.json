@@ -1,0 +1,36 @@
+{
+  "audit_protocol_version": "alms.dev/probe-protocol/v0",
+  "probe_id": "anthropic-native",
+  "runtime_layer": "anthropic",
+  "runtime_packages": ["anthropic==0.116.0"],
+  "api_surface": "anthropic.Anthropic().messages.create (direct Messages API; sync; stream=True for streaming)",
+  "sdk_version": "anthropic 0.116.0",
+  "credential_env_vars": ["ANTHROPIC_API_KEY"],
+  "configuration_keys": ["model", "timeout_ms", "max_output_tokens", "mock_mode"],
+  "claimed_feature_support": {
+    "note": "SDK operations implemented in this probe against Anthropic-native shapes. A framework/SDK operation succeeding OFFLINE says nothing about live Claude behavior or model support; both remain UNVERIFIED until a live run (DevSpec Section 55). The lane exists to preserve Anthropic-native semantics (top-level system, content blocks, tool_use blocks, stop_reason, native stream events), not to prove capability.",
+    "generation": "sdk_operation_implemented (messages.create; text content block)",
+    "roles": "sdk_operation_implemented (top-level system + user/assistant messages, not an invented system message)",
+    "structured_output": "sdk_operation_implemented (native JSON structured output via Messages API output_config.format {type: json_schema, schema}; raw fixture schema preserved; NOT strict tool use, which is a separate tool-input mechanism)",
+    "tools": "sdk_operation_implemented (tool_use blocks; id/name/input captured natively, not reshaped to an OpenAI function_call)",
+    "streaming": "sdk_operation_implemented (native message/content_block lifecycle events captured in order)",
+    "usage": "sdk_operation_implemented (input/output split across message_start/message_delta; cache_creation/cache_read tokens kept distinct)",
+    "errors": "sdk_operation_implemented (SDK exception type + cause chain + status_code + request_id captured)"
+  },
+  "model_support_status": "unverified_until_live",
+  "supported_modes": ["offline_mock", "live"],
+  "native_semantics_notes": [
+    "The system instruction is a TOP-LEVEL field, not an assistant/system message.",
+    "Assistant output is a list of content blocks (text, tool_use), preserved in order — never collapsed.",
+    "stop_reason (end_turn / tool_use / refusal / ...) is native and preserved; refusal is a stop_reason, not a parser failure.",
+    "Usage is split across stream events and reports cache tokens natively; missing usage stays absent, cache usage stays distinct from ordinary input usage.",
+    "Native stream lifecycle: message_start, content_block_start, content_block_delta (text_delta / input_json_delta), content_block_stop, message_delta, message_stop, plus vocabulary-less events like ping."
+  ],
+  "known_limitations": [
+    "No live evidence exists yet; all P0.6A verification is offline via a narrow injected fake that returns real Anthropic SDK objects without the network.",
+    "Parallel tools, cancellation, timeout, retry, embeddings, and multimodal are out of P0.6A scope.",
+    "The probe emits raw evidence and a minimal manifest only; normalization is a harness stage.",
+    "No OpenRouter, Bedrock, Vertex, gateway, or custom base_url is configured; only a direct ANTHROPIC_API_KEY satisfies the live credential gate."
+  ],
+  "run_command": "uv run --project probes/anthropic-native python -m probe <request.json>"
+}

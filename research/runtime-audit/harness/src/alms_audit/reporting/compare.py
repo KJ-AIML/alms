@@ -29,6 +29,26 @@ def _read(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
 
 
+def _structured_mechanism(probe_id: str | None, strategy: str | None, has_structured: bool):
+    """Classify the structured-output mechanism a lane actually used.
+
+    After the P0.6A correction, both NATIVE lanes expose provider-native JSON-schema output
+    (OpenAI Responses API json_schema; Anthropic Messages API output_config.format), while the
+    LangChain offline lane selected a framework-mediated function-calling strategy. This is
+    implementation-shape evidence only.
+    """
+    if not has_structured:
+        return None
+    if strategy == "function_calling":
+        return "framework_function_calling"
+    if strategy == "output_config.format":
+        return "native_json_schema (anthropic messages output_config.format)"
+    if probe_id == "openai-native":
+        # The OpenAI probe requests native json_schema on the Responses API (text.format).
+        return "native_json_schema (openai responses api)"
+    return strategy or "unknown"
+
+
 def _fixture_view(run_dir: Path, fixture_id: str) -> dict:
     fx = run_dir / "fixtures" / fixture_id
     manifest = _read(fx / "probe-response.json")
@@ -45,6 +65,9 @@ def _fixture_view(run_dir: Path, fixture_id: str) -> dict:
     raw_dir = fx / "raw"
     raw_artifacts = sorted(p.name for p in raw_dir.glob("*")) if raw_dir.is_dir() else []
 
+    strategy = (structured or {}).get("data", {}).get("strategy")
+    mechanism = _structured_mechanism(manifest.get("probe_id"), strategy, structured is not None)
+
     return {
         "probe_id": manifest.get("probe_id"),
         "capture_kind": manifest.get("capture_kind"),
@@ -57,7 +80,10 @@ def _fixture_view(run_dir: Path, fixture_id: str) -> dict:
             {"name": t["data"].get("name"), "has_call_id": bool(t["data"].get("call_id"))}
             for t in tool_calls
         ],
-        "structured_output_strategy": (structured or {}).get("data", {}).get("strategy"),
+        "structured_output_strategy": strategy,
+        "structured_output_mechanism": mechanism,
+        "structured_output_is_native_json_schema": bool(mechanism)
+        and mechanism.startswith("native_json_schema"),
         "usage_representation": {
             "present": bool(usage_events),
             "provenance": result.get("usage", {}).get("provenance"),
@@ -98,4 +124,38 @@ def compare_lanes(openai_run: Path, langchain_run: Path, fixture_ids: list[str])
         "openai_run": str(openai_run),
         "langchain_run": str(langchain_run),
         "fixtures": [compare_fixture(openai_run, langchain_run, f) for f in fixture_ids],
+    }
+
+
+def compare_runs(runs: dict[str, Path], fixture_ids: list[str]) -> dict:
+    """Compare an arbitrary set of lanes ({lane_label: run_dir}) across fixtures.
+
+    Used for the P0.6A three-lane diversity comparison (openai-native / langchain /
+    anthropic-native). Still implementation-shape only — see DISCLAIMER. Each fixture view is
+    keyed by lane so callers can inspect system-role, content-block, structured-output, tool,
+    stream, usage, and extension differences without the report deciding what they mean.
+    """
+    return {
+        "disclaimer": DISCLAIMER,
+        "lanes": {label: str(run) for label, run in runs.items()},
+        "fixtures": [
+            {
+                "fixture_id": f,
+                "by_lane": {label: _fixture_view(run, f) for label, run in runs.items()},
+                "structured_strategies": {
+                    label: _fixture_view(run, f)["structured_output_strategy"]
+                    for label, run in runs.items()
+                },
+                "structured_mechanisms": {
+                    label: _fixture_view(run, f)["structured_output_mechanism"]
+                    for label, run in runs.items()
+                },
+                "native_json_schema_lanes": sorted(
+                    label
+                    for label, run in runs.items()
+                    if _fixture_view(run, f)["structured_output_is_native_json_schema"]
+                ),
+            }
+            for f in fixture_ids
+        ],
     }

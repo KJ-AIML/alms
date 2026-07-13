@@ -1,0 +1,32 @@
+[project]
+name = "anthropic-native-probe"
+version = "0.0.0"
+description = "ALMS Phase 0 audit probe: Anthropic native (Messages API). Research infrastructure only."
+requires-python = ">=3.13"
+# Isolation (DevSpec Sections 20 and 25): the Anthropic SDK lives ONLY in this probe env.
+# The central harness must never depend on a provider SDK. This lane exists to challenge
+# OpenAI-shaped assumptions, so the probe preserves Anthropic-native semantics rather than
+# converting them into OpenAI shapes.
+dependencies = [
+    "anthropic==0.116.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/probe"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+# Anchor rootdir here so the probe never inherits another project's pytest config.
+testpaths = ["tests"]
