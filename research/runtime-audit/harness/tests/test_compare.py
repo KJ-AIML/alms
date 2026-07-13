@@ -19,10 +19,13 @@ _OPENAI_PROBE = default_root() / "probes" / "openai-native"
 _LANGCHAIN_PROBE = default_root() / "probes" / "langchain"
 _ANTHROPIC_PROBE = default_root() / "probes" / "anthropic-native"
 _GEMINI_PROBE = default_root() / "probes" / "gemini-native"
+_LITELLM_PROBE = default_root() / "probes" / "litellm-sdk"
+_LITELLM_MODEL = "openai/gpt-synthetic-p07a"
 
 _venvs_present = (_OPENAI_PROBE / ".venv").exists() and (_LANGCHAIN_PROBE / ".venv").exists()
 _three_present = _venvs_present and (_ANTHROPIC_PROBE / ".venv").exists()
 _four_present = _three_present and (_GEMINI_PROBE / ".venv").exists()
+_five_present = _four_present and (_LITELLM_PROBE / ".venv").exists()
 
 
 def _run_lane(corpus_root, lane_id, probe_dir, run_id, model=_MODEL):
@@ -169,3 +172,64 @@ def test_four_lane_diversity_comparison(corpus_root):
     gm_stream = by_id["STREAM-001"]["by_lane"]["gemini-native"]["extension_events"]
     assert gm_stream["provider_extension"] >= 1
     assert gm_stream["framework_extension"] == 0
+
+
+@pytest.mark.skipif(not _five_present, reason="all five probe venvs required")
+def test_five_lane_diversity_comparison(corpus_root):
+    oai = _run_lane(corpus_root, "openai-native", _OPENAI_PROBE, "d5-oai")
+    lc = _run_lane(corpus_root, "langchain-openai", _LANGCHAIN_PROBE, "d5-lc")
+    an = _run_lane(corpus_root, "anthropic-native", _ANTHROPIC_PROBE, "d5-an", model="claude-syn-x")
+    gm = _run_lane(corpus_root, "gemini-native", _GEMINI_PROBE, "d5-gm", model="gemini-syn-x")
+    ll = _run_lane(corpus_root, "litellm-sdk", _LITELLM_PROBE, "d5-ll", model=_LITELLM_MODEL)
+
+    report = compare_runs(
+        {
+            "openai-native": oai.run_dir,
+            "langchain": lc.run_dir,
+            "anthropic-native": an.run_dir,
+            "gemini-native": gm.run_dir,
+            "litellm-sdk": ll.run_dir,
+        },
+        _APPROVED,
+    )
+
+    assert report["disclaimer"] == DISCLAIMER
+    assert "not live provider semantic evidence" in report["disclaimer"]
+    assert "litellm-sdk" in report["lanes"]
+    by_id = {f["fixture_id"]: f for f in report["fixtures"]}
+
+    gen = by_id["GEN-001"]["by_lane"]["litellm-sdk"]
+    assert gen["probe_id"] == "litellm-sdk"
+    assert gen["execution_mode"] == "offline_mock"
+
+    # Structured output: LiteLLM's response_format is framework-mediated, NOT native provider
+    # JSON-schema. It joins LangChain on the framework side; the three native lanes stay native.
+    mechanisms = by_id["STR-001"]["structured_mechanisms"]
+    assert mechanisms["litellm-sdk"].startswith("framework_response_format")
+    native = by_id["STR-001"]["native_json_schema_lanes"]
+    assert "litellm-sdk" not in native
+    assert set(native) == {"openai-native", "anthropic-native", "gemini-native"}
+
+    # Model identity: LiteLLM strips the provider prefix, so requested != observed (a recorded
+    # offline mismatch); its source is framework-derived (offline: fixture_expected), never
+    # provider_native.
+    mi = by_id["GEN-001"]["model_identity_by_lane"]["litellm-sdk"]
+    assert mi["requested_model"] == _LITELLM_MODEL
+    assert mi["observed_returned_model"] == "gpt-synthetic-p07a"
+    assert mi["requested_observed_exact_match"] == "false"
+
+    # LiteLLM auxiliary metadata is framework_extension, never provider_extension.
+    ll_ext = by_id["GEN-001"]["by_lane"]["litellm-sdk"]["extension_events"]
+    assert ll_ext["framework_extension"] >= 1
+    assert ll_ext["provider_extension"] == 0
+
+    # Evidence accuracy: the comparison reports per-fixture execution paths, and they are NOT
+    # identical across the litellm-sdk fixtures. GEN-001 uses the completion mock path; TOOL-001 is
+    # the partial request-transform + response-object-injection path (not full completion(tools=)).
+    gen_path = by_id["GEN-001"]["execution_path_by_lane"]["litellm-sdk"]
+    tool_path = by_id["TOOL-001"]["execution_path_by_lane"]["litellm-sdk"]
+    assert gen_path["components"] == ["completion_mock_response"]
+    assert tool_path["full_completion_tools_path_exercised"] is False
+    assert gen_path["components"] != tool_path["components"]  # paths differ across fixtures
+    # Native lanes do not classify execution paths (litellm-specific evidence).
+    assert by_id["GEN-001"]["execution_path_by_lane"]["openai-native"] is None

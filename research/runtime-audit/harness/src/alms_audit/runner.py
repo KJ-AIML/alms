@@ -58,6 +58,7 @@ _PROBE_BY_RUNTIME = {
     "langchain": "langchain",
     "anthropic": "anthropic-native",
     "google-genai": "gemini-native",
+    "litellm-sdk": "litellm-sdk",
 }
 
 

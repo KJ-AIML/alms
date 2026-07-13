@@ -24,10 +24,13 @@ _APPROVED = ["GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001", "USAGE-
 _MODEL = "gpt-5.4-nano-2026-03-17"
 _ANTHROPIC_MODEL = "claude-synthetic-p06a"
 _GEMINI_MODEL = "gemini-synthetic-p06b"
+# LiteLLM routes by provider prefix; the offline lane requires a provider-qualified model string.
+_LITELLM_MODEL = "openai/gpt-synthetic-p07a"
 _OPENAI_PROBE = default_root() / "probes" / "openai-native"
 _LANGCHAIN_PROBE = default_root() / "probes" / "langchain"
 _ANTHROPIC_PROBE = default_root() / "probes" / "anthropic-native"
 _GEMINI_PROBE = default_root() / "probes" / "gemini-native"
+_LITELLM_PROBE = default_root() / "probes" / "litellm-sdk"
 
 
 def _assert_model_identity(result, requested):
@@ -50,6 +53,7 @@ def test_probe_id_derived_from_runtime_layer():
     assert _probe_id_for_lane({"runtime_layer": "openai"}) == "openai-native"
     assert _probe_id_for_lane({"runtime_layer": "anthropic"}) == "anthropic-native"
     assert _probe_id_for_lane({"runtime_layer": "google-genai"}) == "gemini-native"
+    assert _probe_id_for_lane({"runtime_layer": "litellm-sdk"}) == "litellm-sdk"
 
 
 def _offline_openai_run(corpus_root, run_id="oai-wire-1", ids=None):
@@ -341,3 +345,153 @@ def test_gemini_stream_preserves_native_lifecycle(corpus_root):
     assert "framework_extension" not in types
     assert "response_completed" in types
     assert summary.entries[0]["status"] == "PASS_WITH_EXTENSION"
+
+
+def _offline_litellm_run(corpus_root, run_id="ll-wire-1", ids=None):
+    ids = ids or _APPROVED
+    cfg_path = corpus_root / "configs" / "first-live.override.toml"
+    raw = load_raw(cfg_path)
+    lane = resolve_model(select_lane(load_lanes(corpus_root), "litellm-sdk"), _LITELLM_MODEL)
+    fixtures = select_fixtures(
+        load_fixtures(corpus_root), ids, lane=lane, approved_fixtures=approved_fixtures(raw)
+    )
+    return run(
+        run_id=run_id,
+        fixtures=fixtures,
+        lanes=load_lanes(corpus_root),
+        config=load_config_path(cfg_path),
+        offline_execute=True,
+        selected_lane=lane,
+        model=_LITELLM_MODEL,
+        pricing=None,  # offline needs no pricing snapshot (cost gate is live-only)
+        config_digest="test-digest",
+        command_line="test",
+        root=corpus_root,
+        probe_dir=_LITELLM_PROBE,
+    )
+
+
+@pytest.mark.skipif(
+    not (_LITELLM_PROBE / ".venv").exists(),
+    reason="litellm-sdk probe venv missing; run `uv sync --frozen` in probes/litellm-sdk",
+)
+def test_full_offline_litellm_simulation_all_six(corpus_root):
+    # Parity with the other lanes: CLI selection -> planner -> runner -> real litellm-sdk probe
+    # subprocess in mock mode -> raw litellm evidence -> LiteLLM normalizer -> results -> summary,
+    # across all six base fixtures, with zero provider calls / network / credential.
+    summary = _offline_litellm_run(corpus_root)
+    assert summary.mode == "offline"
+    assert summary.expected_call_count == 6
+    assert [e["fixture_id"] for e in summary.entries] == _APPROVED
+
+    run_summary = json.loads(summary.summary_path.read_text(encoding="utf-8"))
+    assert run_summary["secret_scan"] == "clean"
+    assert run_summary["lane_id"] == "litellm-sdk"
+
+    manifest = json.loads(summary.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["selected_lanes"] == ["litellm-sdk"]
+    assert "litellm-sdk" in manifest["probe_lock_hashes"]
+
+    for fx_id in _APPROVED:
+        fx_dir = summary.run_dir / "fixtures" / fx_id
+        probe_resp = json.loads((fx_dir / "probe-response.json").read_text("utf-8"))
+        assert probe_resp["probe_id"] == "litellm-sdk"
+        assert probe_resp["provider"] == "openai"
+        assert probe_resp["execution_mode"] == "offline_mock"  # never live
+        assert probe_resp["package_versions"]["litellm"] == "1.92.0"
+        assert probe_resp["retry_count_observed"] == 0  # measured, single attempt, no retry
+        result = json.loads((fx_dir / "result.json").read_text("utf-8"))
+        assert is_valid("result", result)
+        _assert_model_identity(result, _LITELLM_MODEL)
+        transcript = json.loads((fx_dir / "normalized-transcript.json").read_text("utf-8"))
+        assert is_valid("normalized-transcript", transcript)
+
+
+@pytest.mark.skipif(
+    not (_LITELLM_PROBE / ".venv").exists(),
+    reason="litellm-sdk probe venv missing; run `uv sync --frozen` in probes/litellm-sdk",
+)
+def test_litellm_prefix_stripping_is_a_recorded_mismatch_not_error(corpus_root):
+    # LiteLLM strips the provider prefix on the returned model field (openai/x -> x), so the
+    # requested and observed models differ. That mismatch is RECORDED (model_identity_match=false),
+    # never turned into an error, and never provider-native (framework abstraction). N-05 stress.
+    summary = _offline_litellm_run(corpus_root, run_id="ll-prefix", ids=["GEN-001"])
+    result = json.loads(
+        (summary.run_dir / "fixtures" / "GEN-001" / "result.json").read_text("utf-8")
+    )
+    mi = result["observed_model_identity"]
+    assert mi["requested_model"] == "openai/gpt-synthetic-p07a"
+    assert mi["observed_returned_model"] == "gpt-synthetic-p07a"  # prefix stripped by litellm
+    assert mi["model_identity_match"] == "false"  # recorded, not corrected
+    assert mi["observed_returned_model_source"] == provenance.FIXTURE_EXPECTED  # offline synthetic
+    assert result["status"] in ("PASS", "PASS_WITH_EXTENSION")  # a mismatch is NOT an error
+
+
+@pytest.mark.skipif(
+    not (_LITELLM_PROBE / ".venv").exists(),
+    reason="litellm-sdk probe venv missing; run `uv sync --frozen` in probes/litellm-sdk",
+)
+def test_litellm_usage_is_framework_native_not_provider(corpus_root):
+    # LiteLLM's OpenAI-shaped usage is framework-normalized (offline it is token-counter
+    # synthesized), so it must be labelled framework_native, NEVER provider_native. N-01 stress.
+    summary = _offline_litellm_run(corpus_root, run_id="ll-usage", ids=["USAGE-001"])
+    result = json.loads(
+        (summary.run_dir / "fixtures" / "USAGE-001" / "result.json").read_text("utf-8")
+    )
+    assert result["usage"]["source"] == provenance.FRAMEWORK_NATIVE
+    assert result["usage"]["input_tokens"] is not None  # present, synthesized
+
+
+@pytest.mark.skipif(
+    not (_LITELLM_PROBE / ".venv").exists(),
+    reason="litellm-sdk probe venv missing; run `uv sync --frozen` in probes/litellm-sdk",
+)
+def test_litellm_metadata_is_framework_extension_never_provider(corpus_root):
+    # LiteLLM auxiliary metadata (hidden params / routing) is a framework abstraction artifact, so
+    # it surfaces as framework_extension, never provider_extension. A litellm lane never emits a
+    # provider_extension event.
+    summary = _offline_litellm_run(corpus_root, run_id="ll-ext", ids=["GEN-001"])
+    tr = json.loads(
+        (summary.run_dir / "fixtures" / "GEN-001" / "normalized-transcript.json").read_text("utf-8")
+    )
+    types = [e["type"] for e in tr["events"]]
+    assert "framework_extension" in types
+    assert "provider_extension" not in types
+    assert summary.entries[0]["status"] == "PASS_WITH_EXTENSION"
+
+
+def _execution_path(transcript):
+    for e in transcript["events"]:
+        if e["type"] == "framework_extension" and "execution_path" in e.get("data", {}):
+            return e["data"]["execution_path"]
+    return None
+
+
+@pytest.mark.skipif(
+    not (_LITELLM_PROBE / ".venv").exists(),
+    reason="litellm-sdk probe venv missing; run `uv sync --frozen` in probes/litellm-sdk",
+)
+def test_litellm_execution_path_recorded_and_tool_is_partial(corpus_root):
+    # Evidence accuracy (P0.7A amendment): the per-fixture execution path is surfaced in the
+    # transcript, and TOOL-001 is a PARTIAL path (request transform + response-object injection),
+    # NOT the full completion(tools=...) path.
+    summary = _offline_litellm_run(corpus_root, run_id="ll-path", ids=["GEN-001", "TOOL-001"])
+    gen_tr = json.loads(
+        (summary.run_dir / "fixtures" / "GEN-001" / "normalized-transcript.json").read_text("utf-8")
+    )
+    tool_tr = json.loads(
+        (summary.run_dir / "fixtures" / "TOOL-001" / "normalized-transcript.json").read_text(
+            "utf-8"
+        )
+    )
+    gen_ep = _execution_path(gen_tr)
+    tool_ep = _execution_path(tool_tr)
+    assert gen_ep is not None and tool_ep is not None
+    # GEN and TOOL used DIFFERENT paths (not identical across fixtures).
+    assert gen_ep["components"] == ["completion_mock_response"]
+    assert tool_ep["components"] == [
+        "framework_request_transformation",
+        "framework_response_object_injection",
+    ]
+    assert tool_ep["full_completion_tools_path_exercised"] is False
+    assert gen_ep["components"] != tool_ep["components"]

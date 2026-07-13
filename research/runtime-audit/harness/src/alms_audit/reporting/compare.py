@@ -48,6 +48,10 @@ def _structured_mechanism(probe_id: str | None, strategy: str | None, has_struct
         return None
     if strategy == "function_calling":
         return "framework_function_calling"
+    if strategy == "response_format.json_schema":
+        # LiteLLM translates an OpenAI-style response_format; the JSON is framework-mediated and
+        # provider validation is unverified_until_live. NOT native provider JSON-schema proof.
+        return "framework_response_format (litellm sdk)"
     if strategy == "output_config.format":
         return "native_json_schema (anthropic messages output_config.format)"
     if strategy == "response_format.text.json_schema":
@@ -80,10 +84,15 @@ def _fixture_view(run_dir: Path, fixture_id: str) -> dict:
     mi = result.get("observed_model_identity") or {}
     observed_model = mi.get("observed_returned_model")
 
+    # Per-fixture execution-path classification (litellm-sdk records this in its raw envelope; other
+    # lanes do not, so it stays None). Evidence accuracy: not all fixtures share one path.
+    exec_path = response.get("execution_path") if isinstance(response, dict) else None
+
     return {
         "probe_id": manifest.get("probe_id"),
         "capture_kind": manifest.get("capture_kind"),
         "execution_mode": manifest.get("execution_mode"),
+        "execution_path": exec_path,
         "package_versions": manifest.get("package_versions", {}),
         "retry_count_observed": manifest.get("retry_count_observed"),
         "raw_artifact_categories": raw_artifacts,
@@ -181,6 +190,12 @@ def compare_runs(runs: dict[str, Path], fixture_ids: list[str]) -> dict:
                     for label, run in runs.items()
                     if _fixture_view(run, f)["structured_output_is_native_json_schema"]
                 ),
+                # Evidence accuracy: the execution path is NOT identical across a lane's fixtures
+                # (e.g. litellm-sdk TOOL-001 is request-transform + response-object-injection, not
+                # the full completion(tools=...) path). None for lanes that do not classify paths.
+                "execution_path_by_lane": {
+                    label: _fixture_view(run, f)["execution_path"] for label, run in runs.items()
+                },
             }
             for f in fixture_ids
         ],

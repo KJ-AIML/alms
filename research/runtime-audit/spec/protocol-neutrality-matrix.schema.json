@@ -38,7 +38,24 @@
         "properties": {
           "fixtures": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
           "execution": { "type": "string", "minLength": 1 },
-          "evidence": { "type": "string", "minLength": 1 }
+          "evidence": { "type": "string", "minLength": 1 },
+          "execution_paths": {
+            "type": "object",
+            "$comment": "P0.7A amendment (evidence accuracy). Per-fixture record of WHICH offline execution path was exercised, so the matrix never implies all of a lane's fixtures used one identical path. Optional and additive: lanes that do not classify paths omit it. Keys are fixture ids; each value records the path components, coverage, whether the full provider adapter / full completion(tools=...) path was exercised (never, offline), any known package-boundary dependency, and the unverified_until_live remainder.",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": ["components", "coverage"],
+              "properties": {
+                "components": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+                "coverage": { "type": "string", "minLength": 1 },
+                "full_provider_adapter_exercised": { "type": "boolean" },
+                "full_completion_tools_path_exercised": { "type": "boolean" },
+                "package_boundary_dependency": { "type": "string" },
+                "unverified_until_live": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
         }
       }
     },

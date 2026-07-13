@@ -1,7 +1,7 @@
 {
   "spec": "alms.dev/protocol-neutrality-matrix/v0",
   "generated_offline": true,
-  "disclaimer": "P0.6C cross-lane protocol-neutrality matrix. Derived from offline-mock evidence and code review against installed SDK/framework shapes and current schema behavior. It is implementation-shape evidence only, NOT live provider semantic evidence, and NOT the ALMS runtime contract. No live provider request was made during P0.6C.",
+  "disclaimer": "Cross-lane protocol-neutrality matrix (P0.6C, model_identity closed P0.6D, litellm-sdk lane added P0.7A). Derived from offline-mock evidence and code review against installed SDK/framework shapes and current schema behavior. It is implementation-shape evidence only, NOT live provider semantic evidence, and NOT the ALMS runtime contract. No live provider request was made during P0.6C/P0.6D/P0.7A, and the LiteLLM Proxy Server was never started. The litellm-sdk lane audits the LiteLLM Python SDK (litellm.completion), NOT the LiteLLM Proxy Server; it was stress-tested against N-01..N-05 and does not reintroduce them.",
   "provenance_vocabulary": [
     "provider_native",
     "framework_native",
@@ -13,7 +13,7 @@
     "unavailable",
     "unverified_until_live"
   ],
-  "lanes": ["openai-native", "langchain", "anthropic-native", "gemini-native"],
+  "lanes": ["openai-native", "langchain", "anthropic-native", "gemini-native", "litellm-sdk"],
   "fixture_coverage": {
     "openai-native": {
       "fixtures": ["GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001", "USAGE-001"],
@@ -34,6 +34,19 @@
       "fixtures": ["GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001", "USAGE-001"],
       "execution": "offline_mock via real gemini-native probe subprocess; store=false on every request; zero provider calls / network / credential.",
       "evidence": "harness/tests/test_lane_dispatch.py::test_full_offline_gemini_simulation_all_six; also test_compare.py::test_four_lane_diversity_comparison"
+    },
+    "litellm-sdk": {
+      "fixtures": ["GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001", "USAGE-001"],
+      "execution": "offline_mock via real litellm-sdk probe subprocess using litellm's own mock_response seam (LiteLLM Python SDK, litellm.completion; NOT the Proxy Server); telemetry off, callbacks/cache empty, num_retries=0, no router/fallbacks, no base_url; zero provider calls / network / credential. The six fixtures do NOT all use an identical execution path (see execution_paths); TOOL-001 is a partial path (request transform + response-object injection), NOT the full completion(tools=...) path.",
+      "evidence": "harness/tests/test_lane_dispatch.py::test_full_offline_litellm_simulation_all_six (+ prefix-strip / usage / framework-extension / execution-path stress); also test_compare.py::test_five_lane_diversity_comparison",
+      "execution_paths": {
+        "GEN-001": { "components": ["completion_mock_response"], "coverage": "offline_completion_mock_path", "full_provider_adapter_exercised": false, "unverified_until_live": ["full_provider_adapter", "provider_request_creation", "provider_returned_semantics", "network_exception_mapping"] },
+        "ROLE-001": { "components": ["completion_mock_response"], "coverage": "offline_completion_mock_path", "full_provider_adapter_exercised": false, "unverified_until_live": ["full_provider_adapter", "provider_request_creation", "provider_returned_semantics", "network_exception_mapping"] },
+        "STR-001": { "components": ["completion_mock_response", "framework_request_transformation"], "coverage": "offline_completion_mock_path", "full_provider_adapter_exercised": false, "unverified_until_live": ["full_provider_adapter", "provider_request_creation", "provider_returned_semantics", "network_exception_mapping"] },
+        "TOOL-001": { "components": ["framework_request_transformation", "framework_response_object_injection"], "coverage": "offline_partial_request_transform_plus_response_injection", "full_provider_adapter_exercised": false, "full_completion_tools_path_exercised": false, "package_boundary_dependency": "litellm.completion(tools=...) imports proxy MCP utilities requiring fastapi, absent by design in this SDK-only probe (finding L-01)", "unverified_until_live": ["full_completion_tools_path", "full_provider_adapter", "provider_request_creation", "provider_returned_semantics", "network_exception_mapping"] },
+        "STREAM-001": { "components": ["completion_mock_response"], "coverage": "offline_completion_mock_path", "full_provider_adapter_exercised": false, "unverified_until_live": ["full_provider_adapter", "provider_request_creation", "provider_returned_semantics", "network_exception_mapping"] },
+        "USAGE-001": { "components": ["completion_mock_response"], "coverage": "offline_completion_mock_path", "full_provider_adapter_exercised": false, "unverified_until_live": ["full_provider_adapter", "provider_request_creation", "provider_returned_semantics", "network_exception_mapping"] }
+      }
     }
   },
   "findings": [
@@ -71,6 +84,13 @@
       "dimension": "model_identity",
       "summary": "probe-response.model holds the requested/configured model id; the provider-returned served model was preserved only in the raw response artifact, with no first-class returned-model field. Closed offline in P0.6D: result.observed_model_identity now carries requested_model / observed_returned_model / observed_returned_model_source / observed_returned_model_raw_ref / execution_mode / model_identity_match, derived per-lane from raw evidence with no fabrication and no canonicalization. Real returned-vs-requested provider routing/alias/snapshot behavior stays unverified_until_live.",
       "status": "resolved_offline"
+    },
+    {
+      "id": "L-01",
+      "severity": "F2",
+      "dimension": "tool_semantics",
+      "summary": "LiteLLM SDK tool path couples to MCP/proxy-oriented dependencies. Invoking the selected completion surface with tool configuration (litellm.completion(tools=...)) in the proxy-free isolated environment imports LiteLLM utilities that require FastAPI (a proxy-server dependency). Impact: the SDK-only lane cannot exercise the complete TOOL-001 completion path without introducing server-layer dependencies; request transformation (get_optional_params) and response representation (litellm ModelResponse tool-call types) remain testable separately, and are what the lane exercises for TOOL-001. Contract impact: no shared ALMS evidence contract failure was observed (no false provenance, no false semantic equivalence, no contract loss). Live status: the complete completion(tools=...) path, provider adapter translation, provider request creation, network exception mapping, and provider-returned tool semantics remain unverified_until_live. Not F1: no reproducible shared-contract loss or false provenance was found.",
+      "status": "proposed"
     }
   ],
   "dimensions": [
@@ -81,7 +101,8 @@
         "openai-native": { "representation": "Responses API input list + instructions; requested model on probe-response.model; served model on the raw response.", "provenance": "provider_native", "preserved": "preserved", "notes": "output-token limit + timeout/retry owned by probe controls (probe_derived)." },
         "langchain": { "representation": "framework message objects -> provider request; requested model recorded exactly, never defaulted.", "provenance": "framework_native", "preserved": "preserved", "notes": "framework mediates request shaping; retry ownership is framework-internal (retry_count_observed may be null)." },
         "anthropic-native": { "representation": "Messages API top-level system + messages; requested model on probe-response.model.", "provenance": "provider_native", "preserved": "preserved", "notes": "system is a separate top-level field, not a message role." },
-        "gemini-native": { "representation": "Interactions API top-level system_instruction + user_input step; store=false always; no previous_interaction_id.", "provenance": "provider_native", "preserved": "preserved", "notes": "requested model on manifest; served model kept separately on the Interaction (see model_identity)." }
+        "gemini-native": { "representation": "Interactions API top-level system_instruction + user_input step; store=false always; no previous_interaction_id.", "provenance": "provider_native", "preserved": "preserved", "notes": "requested model on manifest; served model kept separately on the Interaction (see model_identity)." },
+        "litellm-sdk": { "representation": "litellm.completion(messages/tools/response_format); provider-qualified model string required (an unqualified model raises via get_llm_provider - no hidden default).", "provenance": "framework_native", "preserved": "preserved", "notes": "SDK abstraction, not the Proxy Server; num_retries=0, no router/fallbacks, telemetry off, no base_url. Passing tools to completion routes through proxy MCP utilities (fastapi), so tool request translation is exercised via get_optional_params instead." }
       }
     },
     {
@@ -91,7 +112,8 @@
         "openai-native": { "representation": "served model read from the native Responses object (response.model / stream response.completed); requested model on the manifest.", "provenance": "provider_native", "preserved": "preserved", "notes": "offline source=fixture_expected; live source=provider_native (unverified_until_live). Alias/snapshot never resolved." },
         "langchain": { "representation": "model id exposed only through framework response_metadata (model_name); requested model on the manifest.", "provenance": "framework_native", "preserved": "preserved", "notes": "NEVER provider_native even when the string resembles an OpenAI id. Offline mock exposes model_name='offline-fake' != requested -> a recorded mismatch (model_identity_match=false), not an error." },
         "anthropic-native": { "representation": "served model read from the native Message resource (message.model / message_start); requested model on the manifest.", "provenance": "provider_native", "preserved": "preserved", "notes": "absent message model stays unavailable, never substituted from the requested model." },
-        "gemini-native": { "representation": "served model read from the full Interaction resource (interaction.model), NOT the output_text convenience projection; requested model on the manifest.", "provenance": "provider_native", "preserved": "preserved", "notes": "convenience projection never used as model authority; offline source=fixture_expected." }
+        "gemini-native": { "representation": "served model read from the full Interaction resource (interaction.model), NOT the output_text convenience projection; requested model on the manifest.", "provenance": "provider_native", "preserved": "preserved", "notes": "convenience projection never used as model authority; offline source=fixture_expected." },
+        "litellm-sdk": { "representation": "served model read from litellm ModelResponse.model; LiteLLM STRIPS the provider prefix (openai/x -> x) while _hidden_params.litellm_model_name keeps the full requested string; requested model on the manifest.", "provenance": "framework_native", "preserved": "preserved", "notes": "NEVER provider_native even though OpenAI-shaped. Offline source=fixture_expected; live source=framework_native (unverified_until_live). The prefix strip yields requested!=observed, recorded as model_identity_match=false (not corrected, not an error). Real alias/routing/snapshot behavior unverified_until_live." }
       }
     },
     {
@@ -101,7 +123,8 @@
         "openai-native": { "representation": "response.output items (message/function_call); output_text is a convenience projection not relied upon.", "provenance": "provider_native", "preserved": "preserved", "notes": "output_text would be sdk_convenience; normalizer uses output items." },
         "langchain": { "representation": "AIMessage / AIMessageChunk; concrete framework types stay inside event data, never exposed as audit event types.", "provenance": "framework_native", "preserved": "preserved", "notes": "DevSpec Section 48 special rule honored." },
         "anthropic-native": { "representation": "Message content blocks (text/tool_use/unknown).", "provenance": "provider_native", "preserved": "preserved", "notes": "unknown block types preserved verbatim as provider_extension." },
-        "gemini-native": { "representation": "Interaction resource + chronological steps; output_text convenience projection not relied upon.", "provenance": "provider_native", "preserved": "preserved", "notes": "step-based container, not item-based; retained not reshaped to items." }
+        "gemini-native": { "representation": "Interaction resource + chronological steps; output_text convenience projection not relied upon.", "provenance": "provider_native", "preserved": "preserved", "notes": "step-based container, not item-based; retained not reshaped to items." },
+        "litellm-sdk": { "representation": "litellm ModelResponse (OpenAI ChatCompletion-shaped) choices/message; _hidden_params auxiliary metadata (api_base, litellm_model_name, response_cost, litellm_call_id) preserved distinctly.", "provenance": "framework_native", "preserved": "preserved", "notes": "OpenAI-shaped but LiteLLM-owned; the container is framework output, not provider evidence. Convenience accessors not used as authority." }
       }
     },
     {
@@ -111,7 +134,8 @@
         "openai-native": { "representation": "native json_schema (Responses API text.format).", "provenance": "provider_native", "preserved": "preserved", "notes": "parsed value + validation outcome kept distinct from raw text." },
         "langchain": { "representation": "framework function_calling strategy (offline mock selection).", "provenance": "framework_native", "preserved": "preserved", "notes": "classified framework_function_calling, never native_json_schema." },
         "anthropic-native": { "representation": "native json_schema (Messages output_config.format).", "provenance": "provider_native", "preserved": "preserved", "notes": "strategy=output_config.format." },
-        "gemini-native": { "representation": "native response_format (text.jsonSchema).", "provenance": "provider_native", "preserved": "preserved", "notes": "strategy=response_format.text.json_schema; not a synthetic tool." }
+        "gemini-native": { "representation": "native response_format (text.jsonSchema).", "provenance": "provider_native", "preserved": "preserved", "notes": "strategy=response_format.text.json_schema; not a synthetic tool." },
+        "litellm-sdk": { "representation": "response_format json_schema translated by LiteLLM via get_optional_params (framework-mediated); local JSON parse + local schema-presence check kept distinct from raw text.", "provenance": "framework_native", "preserved": "preserved", "notes": "classified framework_response_format, NOT native_json_schema; NO silent tool fallback; valid JSON alone is not native-structured proof; provider validation unverified_until_live." }
       }
     },
     {
@@ -121,7 +145,8 @@
         "openai-native": { "representation": "function_call output item + call_id; tool_call_started/completed.", "provenance": "provider_native", "preserved": "preserved", "notes": "provider call_id retained." },
         "langchain": { "representation": "message.tool_calls with framework-generated ids; args preserved raw.", "provenance": "framework_native", "preserved": "preserved", "notes": "framework ids marked distinct from provider call ids in data." },
         "anthropic-native": { "representation": "tool_use content block id/name/input.", "provenance": "provider_native", "preserved": "preserved", "notes": "multiple tool_use blocks -> multiple distinct tool_call_completed, not merged." },
-        "gemini-native": { "representation": "function_call step id/name/arguments; requires_action when a call awaits result.", "provenance": "provider_native", "preserved": "preserved", "notes": "requires_action is a native non-terminal state, kept as provider_extension." }
+        "gemini-native": { "representation": "function_call step id/name/arguments; requires_action when a call awaits result.", "provenance": "provider_native", "preserved": "preserved", "notes": "requires_action is a native non-terminal state, kept as provider_extension." },
+        "litellm-sdk": { "representation": "TOOL-001 partial path (see finding L-01 + fixture_coverage.execution_paths): tool request translation exercised via litellm.utils.get_optional_params (tools -> provider params); tool-call RESPONSE injected via litellm ModelResponse types; id/name/raw-argument-string/order preserved. This is NOT the full litellm.completion(tools=...) path.", "provenance": "framework_native", "preserved": "unverified_until_live", "notes": "L-01: passing tools to litellm.completion routes through proxy MCP utilities importing fastapi (a proxy-server dependency), absent by design in this SDK-only lane; so the full completion(tools=...) path is NOT exercised. Verified offline: model routing inspection, tool request schema transformation, LiteLLM tool-call response representation (id/name/raw args/order), normalization + result construction, no tool execution, no parallel-execution inference. Unverified offline (unverified_until_live): the complete completion(tools=...) path, provider adapter translation, provider request creation, network exception mapping, provider-returned tool semantics. Framework tool-call ids are not assumed provider ids." }
       }
     },
     {
@@ -131,7 +156,8 @@
         "openai-native": { "representation": "response.* item stream events; unknown -> provider_extension.", "provenance": "provider_native", "preserved": "unverified_until_live", "notes": "offline mock lifecycle preserved; real event stream unverified_until_live." },
         "langchain": { "representation": "AIMessageChunk stream; synthesized terminal chunk -> framework_extension.", "provenance": "framework_native", "preserved": "unverified_until_live", "notes": "framework chunks never labelled provider events." },
         "anthropic-native": { "representation": "message/content_block lifecycle (start/delta/stop) + ping; block lifecycle -> provider_extension.", "provenance": "provider_native", "preserved": "unverified_until_live", "notes": "content-block lifecycle retained, not collapsed." },
-        "gemini-native": { "representation": "interaction.created/step.start/step.delta/step.stop/interaction.completed; unknown -> provider_extension.", "provenance": "provider_native", "preserved": "unverified_until_live", "notes": "Interaction step lifecycle retained; thought_signature_delta structural-only." }
+        "gemini-native": { "representation": "interaction.created/step.start/step.delta/step.stop/interaction.completed; unknown -> provider_extension.", "provenance": "provider_native", "preserved": "unverified_until_live", "notes": "Interaction step lifecycle retained; thought_signature_delta structural-only." },
+        "litellm-sdk": { "representation": "CustomStreamWrapper -> ModelResponseStream chunks (OpenAI chat.completion.chunk-shaped); delta content; stream_options include_usage terminal usage chunk; aggregate via stream_chunk_builder.", "provenance": "framework_native", "preserved": "unverified_until_live", "notes": "chunks are LiteLLM-normalized, NEVER labelled provider events; order preserved; live event delivery unverified_until_live." }
       }
     },
     {
@@ -141,7 +167,8 @@
         "openai-native": { "representation": "provider usage block; cache_read from input_tokens_details, reasoning from output_tokens_details.", "provenance": "provider_native", "preserved": "preserved", "notes": "source=provider_native; no cache-creation split reported (stays null)." },
         "langchain": { "representation": "framework usage_metadata (input_token_details/output_token_details).", "provenance": "framework_native", "preserved": "preserved", "notes": "source=framework_native (N-01 fix): no longer indistinguishable from provider-reported." },
         "anthropic-native": { "representation": "provider usage with cache_creation_input_tokens + cache_read_input_tokens split.", "provenance": "provider_native", "preserved": "preserved", "notes": "both cache halves now survive into the result summary (N-02 fix); no total reported (null)." },
-        "gemini-native": { "representation": "Interaction usage totals incl total_cached_tokens + total_thought_tokens.", "provenance": "provider_native", "preserved": "preserved", "notes": "thought->reasoning_tokens documented mapping; cache read preserved." }
+        "gemini-native": { "representation": "Interaction usage totals incl total_cached_tokens + total_thought_tokens.", "provenance": "provider_native", "preserved": "preserved", "notes": "thought->reasoning_tokens documented mapping; cache read preserved." },
+        "litellm-sdk": { "representation": "litellm ModelResponse.usage (OpenAI-shaped: prompt/completion/total + prompt_tokens_details.cached_tokens + completion_tokens_details.reasoning_tokens); offline synthesized by token_counter.", "provenance": "framework_native", "preserved": "preserved", "notes": "source=framework_native (N-01 stress: OpenAI-shaped usage from a framework is NOT provider-reported); cache_read + reasoning survive; missing stays null (never 0); offline usage is synthesized, real provider usage unverified_until_live." }
       }
     },
     {
@@ -151,7 +178,8 @@
         "openai-native": { "representation": "no provider dollar cost; cost_estimated from pricing snapshot when priced.", "provenance": "local_estimate", "preserved": "preserved", "notes": "cost_reported null; estimate != billed." },
         "langchain": { "representation": "same local estimate path; token base is framework-normalized.", "provenance": "local_estimate", "preserved": "preserved", "notes": "estimate provenance separate from usage source." },
         "anthropic-native": { "representation": "no provider dollar cost; cost_estimated when priced.", "provenance": "local_estimate", "preserved": "preserved", "notes": "cost_reported null." },
-        "gemini-native": { "representation": "no provider dollar cost; cost_estimated when priced.", "provenance": "local_estimate", "preserved": "preserved", "notes": "cost_reported null." }
+        "gemini-native": { "representation": "no provider dollar cost; cost_estimated when priced.", "provenance": "local_estimate", "preserved": "preserved", "notes": "cost_reported null." },
+        "litellm-sdk": { "representation": "litellm _hidden_params.response_cost (null offline / unpriced synthetic model); harness cost_estimated from pricing snapshot when priced.", "provenance": "local_estimate", "preserved": "preserved", "notes": "response_cost is a LiteLLM ESTIMATE, never labelled billed cost; cost_reported null." }
       }
     },
     {
@@ -161,7 +189,8 @@
         "openai-native": { "representation": "response.status (completed/incomplete) -> observed_terminal_state.", "provenance": "provider_native", "preserved": "preserved", "notes": "native string kept; category mapped." },
         "langchain": { "representation": "response_metadata.finish_reason -> observed_terminal_state.", "provenance": "framework_native", "preserved": "preserved", "notes": "source=framework_native; finish_reason is framework-normalized." },
         "anthropic-native": { "representation": "stop_reason (end_turn/max_tokens/refusal/...) -> observed_terminal_state.", "provenance": "provider_native", "preserved": "preserved", "notes": "refusal category distinct." },
-        "gemini-native": { "representation": "Interaction status (completed/incomplete/requires_action/budget_exceeded/...) -> observed_terminal_state.", "provenance": "provider_native", "preserved": "preserved", "notes": "unknown native status kept verbatim, category unknown; no data loss." }
+        "gemini-native": { "representation": "Interaction status (completed/incomplete/requires_action/budget_exceeded/...) -> observed_terminal_state.", "provenance": "provider_native", "preserved": "preserved", "notes": "unknown native status kept verbatim, category unknown; no data loss." },
+        "litellm-sdk": { "representation": "choice.finish_reason (stop/tool_calls/...) -> observed_terminal_state.", "provenance": "framework_native", "preserved": "preserved", "notes": "source=framework_native: finish_reason is LiteLLM-normalized, not provider-native (N-03 stress: terminal signal stays observable, framework-owned)." }
       }
     },
     {
@@ -171,7 +200,8 @@
         "openai-native": { "representation": "unknown native item/stream events -> provider_extension; refusal -> provider_extension; no framework_extension.", "provenance": "provider_native", "preserved": "preserved", "notes": "framework_extension count is 0 for a native lane." },
         "langchain": { "representation": "synthesized stream chunks + framework message metadata (additional_kwargs/invalid_tool_calls) -> framework_extension; never provider_extension.", "provenance": "framework_native", "preserved": "preserved", "notes": "a framework transformation is never labelled provider-native." },
         "anthropic-native": { "representation": "content-block lifecycle (start/stop), ping, refusal, unknown blocks -> provider_extension; no framework_extension.", "provenance": "provider_native", "preserved": "preserved", "notes": "provider-native block lifecycle retained." },
-        "gemini-native": { "representation": "Interaction step lifecycle, thought step/signature, requires_action, unknown native events -> provider_extension; no framework_extension.", "provenance": "provider_native", "preserved": "preserved", "notes": "google-genai is the provider SDK, so its unknowns are provider_extension, not framework_extension." }
+        "gemini-native": { "representation": "Interaction step lifecycle, thought step/signature, requires_action, unknown native events -> provider_extension; no framework_extension.", "provenance": "provider_native", "preserved": "preserved", "notes": "google-genai is the provider SDK, so its unknowns are provider_extension, not framework_extension." },
+        "litellm-sdk": { "representation": "_hidden_params, routing, tool_request_translation, and unknown fields -> framework_extension; NEVER provider_extension.", "provenance": "framework_native", "preserved": "preserved", "notes": "LiteLLM is a framework abstraction, so a litellm lane never emits a provider_extension event even though its output is OpenAI-shaped." }
       }
     },
     {
@@ -181,7 +211,8 @@
         "openai-native": { "representation": "stateless request; response id in raw; no store reuse.", "provenance": "provider_native", "preserved": "preserved", "notes": "run manifest records credential presence booleans only." },
         "langchain": { "representation": "stateless framework call; provider request id preserved in raw/error.", "provenance": "framework_native", "preserved": "preserved", "notes": "no server-state reuse." },
         "anthropic-native": { "representation": "stateless Messages request; request_id in raw.", "provenance": "provider_native", "preserved": "preserved", "notes": "no conversation state." },
-        "gemini-native": { "representation": "store=false on every request; no previous_interaction_id; thought_signature kept as presence bool only.", "provenance": "provider_native", "preserved": "preserved", "notes": "storage policy explicit; thought signature opaque, never reasoning text." }
+        "gemini-native": { "representation": "store=false on every request; no previous_interaction_id; thought_signature kept as presence bool only.", "provenance": "provider_native", "preserved": "preserved", "notes": "storage policy explicit; thought signature opaque, never reasoning text." },
+        "litellm-sdk": { "representation": "stateless litellm.completion; litellm_call_id in _hidden_params; run manifest records credential presence booleans only.", "provenance": "framework_native", "preserved": "preserved", "notes": "SDK boundary only - no Proxy Server, virtual keys, gateway auth, proxy DB, spend tracking, or multi-tenant state; no server-state reuse." }
       }
     },
     {
@@ -191,7 +222,8 @@
         "openai-native": { "representation": "provider error envelope (exception_type/status_code/request_id) -> error event.", "provenance": "provider_native", "preserved": "preserved", "notes": "ERROR_RUNTIME distinct from UNSUPPORTED." },
         "langchain": { "representation": "framework_error envelope with provider_status_code/provider_request_id preserved.", "provenance": "framework_native", "preserved": "preserved", "notes": "framework exception type distinguished from provider cause." },
         "anthropic-native": { "representation": "provider_error envelope with cause_chain.", "provenance": "provider_native", "preserved": "preserved", "notes": "native cause preserved before generic categorization." },
-        "gemini-native": { "representation": "provider_error envelope (exception_type/cause_chain/code/status/request_id).", "provenance": "provider_native", "preserved": "preserved", "notes": "errorevent stream events preserved; timeout/cancel recorded as client-side action only." }
+        "gemini-native": { "representation": "provider_error envelope (exception_type/cause_chain/code/status/request_id).", "provenance": "provider_native", "preserved": "preserved", "notes": "errorevent stream events preserved; timeout/cancel recorded as client-side action only." },
+        "litellm-sdk": { "representation": "LiteLLM exception taxonomy (its OWN OpenAI-shaped classes: InternalServerError/BadRequestError/RateLimitError/...) with llm_provider/status_code/model + underlying cause chain.", "provenance": "framework_native", "preserved": "preserved", "notes": "the LiteLLM exception class is distinguished from the provider cause and is NEVER labelled provider-native; offline exception exercised via litellm's mock exception seam; real network-mapped provider exceptions unverified_until_live (no live error fixture authorized)." }
       }
     }
   ]

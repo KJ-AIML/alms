@@ -28,20 +28,32 @@ def test_shipped_neutrality_matrix_validates_against_its_schema():
     matrix = json.loads(
         (root / "reports" / "protocol-neutrality-matrix.json").read_text(encoding="utf-8")
     )
-    four_lanes = {"openai-native", "langchain", "anthropic-native", "gemini-native"}
+    # Five lanes as of P0.7A (litellm-sdk added to the P0.6C four).
+    five_lanes = {"openai-native", "langchain", "anthropic-native", "gemini-native", "litellm-sdk"}
     six_fixtures = {"GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001", "USAGE-001"}
     assert matrix["generated_offline"] is True
-    assert set(matrix["lanes"]) == four_lanes
+    assert set(matrix["lanes"]) == five_lanes
     assert validation_errors("protocol-neutrality-matrix", matrix, root) == []
 
     # Six-fixture coverage recorded for every lane (Task 3).
-    assert set(matrix["fixture_coverage"]) == four_lanes
+    assert set(matrix["fixture_coverage"]) == five_lanes
     for lane, cov in matrix["fixture_coverage"].items():
         assert set(cov["fixtures"]) == six_fixtures, lane
         assert "offline_mock" in cov["execution"]
         assert cov["evidence"]
 
-    # Required neutrality dimensions present, each covering all four lanes.
+    # litellm-sdk records per-fixture execution paths (P0.7A evidence-accuracy amendment); the six
+    # fixtures do NOT share one path, and TOOL-001 is NOT the full completion(tools=...) path.
+    ll_paths = matrix["fixture_coverage"]["litellm-sdk"]["execution_paths"]
+    assert set(ll_paths) == six_fixtures
+    assert ll_paths["TOOL-001"]["full_completion_tools_path_exercised"] is False
+    assert ll_paths["GEN-001"]["components"] != ll_paths["TOOL-001"]["components"]
+    # L-01 recorded (proposed F2), not F1.
+    l01 = next(f for f in matrix["findings"] if f["id"] == "L-01")
+    assert l01["severity"] == "F2"
+    assert l01["status"] == "proposed"
+
+    # Required neutrality dimensions present, each covering all five lanes.
     dims = {d["dimension"]: d for d in matrix["dimensions"]}
     for required in (
         "request_representation",
@@ -55,7 +67,7 @@ def test_shipped_neutrality_matrix_validates_against_its_schema():
         "state_and_privacy",
     ):
         assert required in dims, required
-        assert set(dims[required]["by_lane"]) == four_lanes, required
+        assert set(dims[required]["by_lane"]) == five_lanes, required
 
 
 # ------------------------- preservation -------------------------

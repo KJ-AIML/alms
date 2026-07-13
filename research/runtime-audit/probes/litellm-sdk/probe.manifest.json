@@ -1,0 +1,38 @@
+{
+  "audit_protocol_version": "alms.dev/probe-protocol/v0",
+  "probe_id": "litellm-sdk",
+  "runtime_layer": "litellm-sdk",
+  "runtime_packages": ["litellm==1.92.0"],
+  "api_surface": "litellm.completion (synchronous SDK Chat-Completions abstraction): messages / tools (via get_optional_params) / response_format / stream; ModelResponse + CustomStreamWrapper + litellm exception taxonomy",
+  "sdk_version": "litellm 1.92.0 (transitive openai; python >=3.13)",
+  "boundary": "LiteLLM Python SDK ONLY. This lane does NOT audit the LiteLLM Proxy Server, virtual keys, gateway authentication, proxy rate limiting, proxy database state, proxy administration APIs, router, fallbacks, load balancing, multiple deployments, caching, telemetry callbacks, observability integrations, or spend tracking. Those belong to a separate server-boundary slice if later justified.",
+  "credential_env_vars": ["OPENAI_API_KEY"],
+  "configuration_keys": ["model", "timeout_ms", "max_output_tokens", "mock_mode"],
+  "claimed_feature_support": {
+    "note": "LiteLLM SDK operations implemented in this probe. A framework operation succeeding OFFLINE says nothing about live provider semantics or model support; both remain UNVERIFIED until a live run (DevSpec Section 55). LiteLLM's abstraction behavior (provider routing, request-param translation, response normalization, streaming aggregation, usage synthesis, exception mapping) is the audit subject, not a capability claim.",
+    "generation": "framework_operation_implemented (litellm.completion, mock_response seam)",
+    "roles": "framework_operation_implemented (system/user message conversion)",
+    "structured_output": "framework_operation_implemented (response_format json_schema translated via get_optional_params; strategy recorded; local parse + local schema check; NO tool fallback)",
+    "tools": "framework_operation_implemented (tool request translation via get_optional_params; tool-call response via litellm ModelResponse types; tools NOT sent through completion, which routes via proxy MCP/fastapi)",
+    "streaming": "framework_operation_implemented (litellm.completion stream=True; ModelResponseStream chunks + include_usage terminal chunk captured)",
+    "usage": "framework_operation_implemented (ModelResponse.usage captured; framework_native; offline synthesized by token_counter; absent stays absent)",
+    "errors": "framework_operation_implemented (litellm exception taxonomy + underlying cause chain captured via mock exception seam)"
+  },
+  "model_support_status": "unverified_until_live",
+  "supported_modes": ["offline_mock", "live"],
+  "framework_boundary_notes": [
+    "LiteLLM presents unlike providers through an OpenAI-Chat-Completions-SHAPED abstraction (ModelResponse / usage / tool_calls / exception classes). That output is FRAMEWORK-owned (framework_native), NEVER provider_native merely because the field names resemble OpenAI's.",
+    "LiteLLM STRIPS the provider prefix on the returned model field (openai/x -> x); the full requested string survives only in _hidden_params.litellm_model_name. Requested != observed is recorded (model_identity_match=false), not corrected.",
+    "Offline usage is synthesized by LiteLLM's token_counter, not provider-reported; the real provider usage block stays unverified_until_live.",
+    "Passing tools directly to litellm.completion in 1.92.0 routes through proxy MCP utilities that import fastapi (a proxy-server dependency out of this SDK lane's scope); the SDK request-side tool translation is exercised via get_optional_params instead.",
+    "response_format json_schema is translated by LiteLLM (framework-mediated); valid JSON offline is NOT native-structured proof; provider validation is unverified_until_live."
+  ],
+  "known_limitations": [
+    "No live evidence exists yet; all P0.7A verification is offline via litellm's own mock_response seam, which runs real litellm machinery (routing, request translation, ModelResponse typing, streaming wrapper) without the network.",
+    "Real provider request shape/headers/routing/alias resolution/cost calculation/retry behavior/exception mapping from a network response stay unverified_until_live.",
+    "Automatic retries (num_retries=0), fallbacks, router, load balancing, caching, telemetry, and callbacks are all disabled; the Proxy Server is never started.",
+    "The probe emits raw evidence and a minimal manifest only; normalization is a harness stage.",
+    "LiteLLM spawns a background async logging task; on Windows this produces harmless GC-time asyncio cleanup warnings after the manifest is already written (does not affect exit code or the manifest)."
+  ],
+  "run_command": "uv run --project probes/litellm-sdk python -m probe <request.json>"
+}

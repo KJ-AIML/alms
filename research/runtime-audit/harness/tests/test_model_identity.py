@@ -14,6 +14,7 @@ from alms_audit import provenance
 from alms_audit.normalizers import anthropic as anthropic_nz
 from alms_audit.normalizers import gemini as gemini_nz
 from alms_audit.normalizers import langchain as langchain_nz
+from alms_audit.normalizers import litellm as litellm_nz
 from alms_audit.normalizers import openai as openai_nz
 from alms_audit.results import interpret
 from alms_audit.schemas import default_root, is_valid
@@ -82,6 +83,13 @@ def _langchain(model_name):
     if model_name is not None:
         meta["model_name"] = model_name
     return {"message": {"content": "hi", "response_metadata": meta}}
+
+
+def _litellm(model):
+    resp = {"object": "chat.completion", "choices": [{"finish_reason": "stop", "message": {}}]}
+    if model is not None:
+        resp["model"] = model
+    return {"capture_kind": "response", "response": resp}
 
 
 # --- shared contract ------------------------------------------------------------------
@@ -341,3 +349,45 @@ def test_mismatch_is_recorded_not_an_error():
 def test_langchain_stream_model_from_final_message():
     env = {"final_message": {"response_metadata": {"model_name": "lc-stream-x"}}}
     assert langchain_nz.extract_model_identity("stream", env) == "lc-stream-x"
+
+
+# --- LiteLLM SDK ----------------------------------------------------------------------
+def test_litellm_model_never_provider_native():
+    # LiteLLM's ModelResponse.model is framework-mediated: even offline it is fixture_expected,
+    # and its LIVE source is framework_native, NEVER provider_native (the OpenAI-shaped string and
+    # the stripped provider prefix do not make it provider evidence).
+    assert litellm_nz.MODEL_IDENTITY_LIVE_SOURCE == provenance.FRAMEWORK_NATIVE
+    mi = _identity(_litellm("gpt-4o-like"), litellm_nz).result["observed_model_identity"]
+    assert mi["observed_returned_model"] == "gpt-4o-like"
+    assert mi["observed_returned_model_source"] == provenance.FIXTURE_EXPECTED  # offline
+    assert mi["observed_returned_model_source"] != provenance.PROVIDER_NATIVE
+
+
+def test_litellm_live_model_is_framework_native():
+    mi = _identity(_litellm("gpt-4o-like"), litellm_nz, execution_mode="live").result[
+        "observed_model_identity"
+    ]
+    assert mi["observed_returned_model_source"] == provenance.FRAMEWORK_NATIVE
+
+
+def test_litellm_prefix_strip_is_recorded_mismatch():
+    # The classic LiteLLM canonicalization: requested openai/x, observed x -> recorded mismatch,
+    # no canonicalization applied, not an error.
+    out = _identity(_litellm("gpt-x"), litellm_nz, requested_model="openai/gpt-x")
+    mi = out.result["observed_model_identity"]
+    assert (mi["requested_model"], mi["observed_returned_model"]) == ("openai/gpt-x", "gpt-x")
+    assert mi["model_identity_match"] == "false"
+    assert out.status == "PASS"
+
+
+def test_litellm_missing_model_unavailable_not_requested():
+    mi = _identity(_litellm(None), litellm_nz, requested_model="openai/req").result[
+        "observed_model_identity"
+    ]
+    assert mi["observed_returned_model"] is None  # requested never copied in
+    assert mi["observed_returned_model_source"] == provenance.UNAVAILABLE
+
+
+def test_litellm_stream_model_from_aggregate():
+    env = {"capture_kind": "stream", "aggregate": {"model": "gpt-stream-x"}, "chunks": []}
+    assert litellm_nz.extract_model_identity("stream", env) == "gpt-stream-x"
