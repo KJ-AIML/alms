@@ -28,15 +28,22 @@ def test_shipped_neutrality_matrix_validates_against_its_schema():
     matrix = json.loads(
         (root / "reports" / "protocol-neutrality-matrix.json").read_text(encoding="utf-8")
     )
-    # Five lanes as of P0.7A (litellm-sdk added to the P0.6C four).
-    five_lanes = {"openai-native", "langchain", "anthropic-native", "gemini-native", "litellm-sdk"}
+    # Six lanes as of P0.7B (pydantic-ai-agent added to the P0.7A five).
+    six_lanes = {
+        "openai-native",
+        "langchain",
+        "anthropic-native",
+        "gemini-native",
+        "litellm-sdk",
+        "pydantic-ai-agent",
+    }
     six_fixtures = {"GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001", "USAGE-001"}
     assert matrix["generated_offline"] is True
-    assert set(matrix["lanes"]) == five_lanes
+    assert set(matrix["lanes"]) == six_lanes
     assert validation_errors("protocol-neutrality-matrix", matrix, root) == []
 
     # Six-fixture coverage recorded for every lane (Task 3).
-    assert set(matrix["fixture_coverage"]) == five_lanes
+    assert set(matrix["fixture_coverage"]) == six_lanes
     for lane, cov in matrix["fixture_coverage"].items():
         assert set(cov["fixtures"]) == six_fixtures, lane
         assert "offline_mock" in cov["execution"]
@@ -48,12 +55,18 @@ def test_shipped_neutrality_matrix_validates_against_its_schema():
     assert set(ll_paths) == six_fixtures
     assert ll_paths["TOOL-001"]["full_completion_tools_path_exercised"] is False
     assert ll_paths["GEN-001"]["components"] != ll_paths["TOOL-001"]["components"]
-    # L-01 recorded (proposed F2), not F1.
+    # pydantic-ai-agent also records per-fixture execution paths; STREAM uses run_stream_events +
+    # agent.iter, a different path from the non-stream agent.iter fixtures.
+    pa_paths = matrix["fixture_coverage"]["pydantic-ai-agent"]["execution_paths"]
+    assert set(pa_paths) == six_fixtures
+    assert pa_paths["GEN-001"]["components"] != pa_paths["STREAM-001"]["components"]
+    # L-01 recorded (proposed F2), not F1 (unchanged by P0.7B).
     l01 = next(f for f in matrix["findings"] if f["id"] == "L-01")
     assert l01["severity"] == "F2"
     assert l01["status"] == "proposed"
 
-    # Required neutrality dimensions present, each covering all five lanes.
+    # Required neutrality dimensions present, each covering all six lanes. Includes the six new
+    # PydanticAI-relevant dimensions added in P0.7B.
     dims = {d["dimension"]: d for d in matrix["dimensions"]}
     for required in (
         "request_representation",
@@ -65,9 +78,15 @@ def test_shipped_neutrality_matrix_validates_against_its_schema():
         "terminal_state",
         "extensions",
         "state_and_privacy",
+        "agent_graph",
+        "instruction_and_message_parts",
+        "retry_and_request_limit_ownership",
+        "run_level_usage_aggregation",
+        "instrumentation_and_gateway",
+        "provider_native_evidence_availability",
     ):
         assert required in dims, required
-        assert set(dims[required]["by_lane"]) == five_lanes, required
+        assert set(dims[required]["by_lane"]) == six_lanes, required
 
 
 # ------------------------- preservation -------------------------
@@ -142,6 +161,10 @@ def test_valid_json_alone_is_not_native_structured_proof():
     assert _structured_mechanism(None, "output_config.format", True).startswith(
         "native_json_schema"
     )
+    # PydanticAI NativeOutput is framework-mediated offline, NOT the native_json_schema family.
+    pa_mech = _structured_mechanism("pydantic-ai-agent", "native_output", True)
+    assert pa_mech == "framework_native_output (pydanticai)"
+    assert not pa_mech.startswith("native_json_schema")
 
 
 # ------------------------- negative guarantees -------------------------

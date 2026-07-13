@@ -1,0 +1,34 @@
+[project]
+name = "pydantic-ai-agent-probe"
+version = "0.0.0"
+description = "ALMS Phase 0 audit probe: PydanticAI Agent framework stress lane. Research infrastructure only. Agent surface ONLY, NOT Pydantic AI Gateway / Evals / Logfire."
+requires-python = ">=3.13"
+# Isolation (DevSpec Sections 20 and 25): PydanticAI lives ONLY in this probe env. The central
+# harness must never depend on pydantic_ai / pydantic_graph / logfire. This lane audits the
+# PydanticAI Agent (Agent graph, framework message/part model, structured-output strategies,
+# deferred tools, framework retry ownership, stream events, usage aggregation, model identity,
+# framework terminal states and exceptions), NOT the Pydantic AI Gateway, Pydantic Evals,
+# Pydantic Graph as a standalone product, MCP servers, durable execution, or Logfire/OTel export.
+dependencies = [
+    "pydantic-ai-slim==2.9.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/probe"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+# Anchor rootdir here so the probe never inherits another project's pytest config.
+testpaths = ["tests"]

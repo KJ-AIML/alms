@@ -26,11 +26,15 @@ _ANTHROPIC_MODEL = "claude-synthetic-p06a"
 _GEMINI_MODEL = "gemini-synthetic-p06b"
 # LiteLLM routes by provider prefix; the offline lane requires a provider-qualified model string.
 _LITELLM_MODEL = "openai/gpt-synthetic-p07a"
+# PydanticAI: the requested model is NOT the offline observed model (the FunctionModel exposes a
+# synthetic model_name), so requested != observed is expected offline.
+_PYDANTICAI_MODEL = "openai:gpt-synthetic-p07b"
 _OPENAI_PROBE = default_root() / "probes" / "openai-native"
 _LANGCHAIN_PROBE = default_root() / "probes" / "langchain"
 _ANTHROPIC_PROBE = default_root() / "probes" / "anthropic-native"
 _GEMINI_PROBE = default_root() / "probes" / "gemini-native"
 _LITELLM_PROBE = default_root() / "probes" / "litellm-sdk"
+_PYDANTICAI_PROBE = default_root() / "probes" / "pydantic-ai-agent"
 
 
 def _assert_model_identity(result, requested):
@@ -54,6 +58,7 @@ def test_probe_id_derived_from_runtime_layer():
     assert _probe_id_for_lane({"runtime_layer": "anthropic"}) == "anthropic-native"
     assert _probe_id_for_lane({"runtime_layer": "google-genai"}) == "gemini-native"
     assert _probe_id_for_lane({"runtime_layer": "litellm-sdk"}) == "litellm-sdk"
+    assert _probe_id_for_lane({"runtime_layer": "pydantic-ai-agent"}) == "pydantic-ai-agent"
 
 
 def _offline_openai_run(corpus_root, run_id="oai-wire-1", ids=None):
@@ -495,3 +500,109 @@ def test_litellm_execution_path_recorded_and_tool_is_partial(corpus_root):
     ]
     assert tool_ep["full_completion_tools_path_exercised"] is False
     assert gen_ep["components"] != tool_ep["components"]
+
+
+def _offline_pydanticai_run(corpus_root, run_id="p7b-wire-1", ids=None):
+    ids = ids or _APPROVED
+    cfg_path = corpus_root / "configs" / "first-live.override.toml"
+    raw = load_raw(cfg_path)
+    lane = resolve_model(
+        select_lane(load_lanes(corpus_root), "pydantic-ai-agent"), _PYDANTICAI_MODEL
+    )
+    fixtures = select_fixtures(
+        load_fixtures(corpus_root), ids, lane=lane, approved_fixtures=approved_fixtures(raw)
+    )
+    return run(
+        run_id=run_id,
+        fixtures=fixtures,
+        lanes=load_lanes(corpus_root),
+        config=load_config_path(cfg_path),
+        offline_execute=True,
+        selected_lane=lane,
+        model=_PYDANTICAI_MODEL,
+        pricing=None,
+        config_digest="test-digest",
+        command_line="test",
+        root=corpus_root,
+        probe_dir=_PYDANTICAI_PROBE,
+    )
+
+
+@pytest.mark.skipif(
+    not (_PYDANTICAI_PROBE / ".venv").exists(),
+    reason="pydantic-ai-agent probe venv missing; run `uv sync --frozen` in probes/pydantic-ai-agent",
+)
+def test_full_offline_pydanticai_simulation_all_six(corpus_root):
+    # Parity with the other lanes: CLI selection -> planner -> runner -> real pydantic-ai-agent
+    # probe subprocess in mock mode -> raw Agent evidence -> PydanticAI normalizer -> results ->
+    # summary, across all six base fixtures, with zero provider calls / network / credential /
+    # tool executions.
+    summary = _offline_pydanticai_run(corpus_root)
+    assert summary.mode == "offline"
+    assert summary.expected_call_count == 6
+    assert [e["fixture_id"] for e in summary.entries] == _APPROVED
+
+    run_summary = json.loads(summary.summary_path.read_text(encoding="utf-8"))
+    assert run_summary["secret_scan"] == "clean"
+    assert run_summary["lane_id"] == "pydantic-ai-agent"
+
+    manifest = json.loads(summary.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["selected_lanes"] == ["pydantic-ai-agent"]
+    assert "pydantic-ai-agent" in manifest["probe_lock_hashes"]
+
+    for fx_id in _APPROVED:
+        fx_dir = summary.run_dir / "fixtures" / fx_id
+        probe_resp = json.loads((fx_dir / "probe-response.json").read_text("utf-8"))
+        assert probe_resp["probe_id"] == "pydantic-ai-agent"
+        assert probe_resp["provider"] == "openai"
+        assert probe_resp["execution_mode"] == "offline_mock"  # never live
+        assert probe_resp["package_versions"]["pydantic_ai"] == "2.9.0"
+        assert probe_resp["retry_count_observed"] == 0  # measured, single request, no retry
+        result = json.loads((fx_dir / "result.json").read_text("utf-8"))
+        assert is_valid("result", result)
+        # Agent RunUsage aggregation is framework-owned, never provider-native.
+        assert result["usage"]["source"] == provenance.FRAMEWORK_NATIVE
+        _assert_model_identity(result, _PYDANTICAI_MODEL)
+        transcript = json.loads((fx_dir / "normalized-transcript.json").read_text("utf-8"))
+        assert is_valid("normalized-transcript", transcript)
+
+
+@pytest.mark.skipif(
+    not (_PYDANTICAI_PROBE / ".venv").exists(),
+    reason="pydantic-ai-agent probe venv missing; run `uv sync --frozen` in probes/pydantic-ai-agent",
+)
+def test_pydanticai_offline_model_identity_is_synthetic_mismatch(corpus_root):
+    # The offline FunctionModel exposes a synthetic model_name distinct from the requested model,
+    # so requested != observed is RECORDED (model_identity_match=false), non-failing, offline
+    # source fixture_expected, framework-owned. N-05 stress under a framework lane.
+    summary = _offline_pydanticai_run(corpus_root, run_id="p7b-mi", ids=["GEN-001"])
+    result = json.loads(
+        (summary.run_dir / "fixtures" / "GEN-001" / "result.json").read_text("utf-8")
+    )
+    mi = result["observed_model_identity"]
+    assert mi["requested_model"] == _PYDANTICAI_MODEL
+    assert mi["observed_returned_model"] == "function:offline-synthetic-model"
+    assert mi["model_identity_match"] == "false"  # requested != observed, recorded not error
+    assert mi["observed_returned_model_source"] == provenance.FIXTURE_EXPECTED
+    assert result["status"] in ("PASS", "PASS_WITH_EXTENSION")  # a mismatch is never an error
+
+
+@pytest.mark.skipif(
+    not (_PYDANTICAI_PROBE / ".venv").exists(),
+    reason="pydantic-ai-agent probe venv missing; run `uv sync --frozen` in probes/pydantic-ai-agent",
+)
+def test_pydanticai_deferred_tool_is_requires_action_no_execution(corpus_root):
+    # TOOL-001 defers (approval-required): the terminal state is requires_action, the tool body is
+    # never executed, and the deferral is a framework_extension (never provider-native).
+    summary = _offline_pydanticai_run(corpus_root, run_id="p7b-tool", ids=["TOOL-001"])
+    fx_dir = summary.run_dir / "fixtures" / "TOOL-001"
+    result = json.loads((fx_dir / "result.json").read_text("utf-8"))
+    assert result["observed_terminal_state"]["native"] == "tool_call"
+    assert result["observed_terminal_state"]["category"] == "requires_action"
+    transcript = json.loads((fx_dir / "normalized-transcript.json").read_text("utf-8"))
+    types = [e["type"] for e in transcript["events"]]
+    assert "tool_call_completed" in types
+    assert "provider_extension" not in types
+    completed = next(e for e in transcript["events"] if e["type"] == "tool_call_completed")
+    assert completed["data"]["deferred"] is True
+    assert completed["data"]["name"] == "get_weather"

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 def select(runtime_layer: str | None):
     """Return the normalizer module for a lane's runtime layer (default: openai)."""
-    from . import anthropic, gemini, langchain, litellm, openai
+    from . import anthropic, gemini, langchain, litellm, openai, pydanticai
 
     return {
         "openai": openai,
@@ -25,4 +25,5 @@ def select(runtime_layer: str | None):
         "anthropic": anthropic,
         "google-genai": gemini,
         "litellm-sdk": litellm,
+        "pydantic-ai-agent": pydanticai,
     }.get(runtime_layer or "", openai)

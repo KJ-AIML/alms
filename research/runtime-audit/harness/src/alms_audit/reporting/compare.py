@@ -52,6 +52,12 @@ def _structured_mechanism(probe_id: str | None, strategy: str | None, has_struct
         # LiteLLM translates an OpenAI-style response_format; the JSON is framework-mediated and
         # provider validation is unverified_until_live. NOT native provider JSON-schema proof.
         return "framework_response_format (litellm sdk)"
+    if strategy == "native_output":
+        # PydanticAI NativeOutput: the framework selects native mode, generates the JSON Schema,
+        # and parses/validates offline against a SYNTHETIC model profile. It is framework-mediated;
+        # a real provider following native JSON schema is unverified_until_live. NOT provider-native
+        # JSON-schema proof, so it does NOT join the native_json_schema family.
+        return "framework_native_output (pydanticai)"
     if strategy == "output_config.format":
         return "native_json_schema (anthropic messages output_config.format)"
     if strategy == "response_format.text.json_schema":

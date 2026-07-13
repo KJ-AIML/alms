@@ -21,11 +21,14 @@ _ANTHROPIC_PROBE = default_root() / "probes" / "anthropic-native"
 _GEMINI_PROBE = default_root() / "probes" / "gemini-native"
 _LITELLM_PROBE = default_root() / "probes" / "litellm-sdk"
 _LITELLM_MODEL = "openai/gpt-synthetic-p07a"
+_PYDANTICAI_PROBE = default_root() / "probes" / "pydantic-ai-agent"
+_PYDANTICAI_MODEL = "openai:gpt-synthetic-p07b"
 
 _venvs_present = (_OPENAI_PROBE / ".venv").exists() and (_LANGCHAIN_PROBE / ".venv").exists()
 _three_present = _venvs_present and (_ANTHROPIC_PROBE / ".venv").exists()
 _four_present = _three_present and (_GEMINI_PROBE / ".venv").exists()
 _five_present = _four_present and (_LITELLM_PROBE / ".venv").exists()
+_six_present = _five_present and (_PYDANTICAI_PROBE / ".venv").exists()
 
 
 def _run_lane(corpus_root, lane_id, probe_dir, run_id, model=_MODEL):
@@ -233,3 +236,71 @@ def test_five_lane_diversity_comparison(corpus_root):
     assert gen_path["components"] != tool_path["components"]  # paths differ across fixtures
     # Native lanes do not classify execution paths (litellm-specific evidence).
     assert by_id["GEN-001"]["execution_path_by_lane"]["openai-native"] is None
+
+
+@pytest.mark.skipif(
+    not _six_present, reason="all six probe venvs required for the six-lane comparison"
+)
+def test_six_lane_diversity_comparison(corpus_root):
+    oai = _run_lane(corpus_root, "openai-native", _OPENAI_PROBE, "d6-oai")
+    lc = _run_lane(corpus_root, "langchain-openai", _LANGCHAIN_PROBE, "d6-lc")
+    an = _run_lane(corpus_root, "anthropic-native", _ANTHROPIC_PROBE, "d6-an", model="claude-syn-x")
+    gm = _run_lane(corpus_root, "gemini-native", _GEMINI_PROBE, "d6-gm", model="gemini-syn-x")
+    ll = _run_lane(corpus_root, "litellm-sdk", _LITELLM_PROBE, "d6-ll", model=_LITELLM_MODEL)
+    pa = _run_lane(
+        corpus_root, "pydantic-ai-agent", _PYDANTICAI_PROBE, "d6-pa", model=_PYDANTICAI_MODEL
+    )
+
+    report = compare_runs(
+        {
+            "openai-native": oai.run_dir,
+            "langchain": lc.run_dir,
+            "anthropic-native": an.run_dir,
+            "gemini-native": gm.run_dir,
+            "litellm-sdk": ll.run_dir,
+            "pydantic-ai-agent": pa.run_dir,
+        },
+        _APPROVED,
+    )
+
+    assert report["disclaimer"] == DISCLAIMER
+    assert "pydantic-ai-agent" in report["lanes"]
+    by_id = {f["fixture_id"]: f for f in report["fixtures"]}
+
+    gen = by_id["GEN-001"]["by_lane"]["pydantic-ai-agent"]
+    assert gen["probe_id"] == "pydantic-ai-agent"
+    assert gen["execution_mode"] == "offline_mock"
+
+    # Structured output: PydanticAI NativeOutput is framework-mediated offline (framework selects
+    # native mode + generates schema); it is NOT provider-native JSON-schema proof, so it does NOT
+    # join the native_json_schema family (only the three native SDK lanes do).
+    mechanisms = by_id["STR-001"]["structured_mechanisms"]
+    assert mechanisms["pydantic-ai-agent"] == "framework_native_output (pydanticai)"
+    native = by_id["STR-001"]["native_json_schema_lanes"]
+    assert "pydantic-ai-agent" not in native
+    assert set(native) == {"openai-native", "anthropic-native", "gemini-native"}
+
+    # Three frameworks are compared WITHOUT being treated as equivalent: langchain uses
+    # function-calling, litellm a translated response_format, pydantic-ai native-output - three
+    # DISTINCT framework-mediated mechanisms, none of them provider-native.
+    assert mechanisms["langchain"] != mechanisms["litellm-sdk"] != mechanisms["pydantic-ai-agent"]
+    assert mechanisms["langchain"] != mechanisms["pydantic-ai-agent"]
+
+    # Model identity: the offline FunctionModel exposes a synthetic model_name distinct from the
+    # requested model -> a recorded mismatch, framework-derived (fixture_expected), never provider.
+    mi = by_id["GEN-001"]["model_identity_by_lane"]["pydantic-ai-agent"]
+    assert mi["requested_model"] == _PYDANTICAI_MODEL
+    assert mi["observed_returned_model"] == "function:offline-synthetic-model"
+    assert mi["requested_observed_exact_match"] == "false"
+    assert mi["observed_returned_model_source"] == "fixture_expected"
+
+    # PydanticAI Agent metadata (graph nodes / Agent info) is framework_extension, never
+    # provider_extension (a framework lane emits no provider_extension event).
+    pa_ext = by_id["GEN-001"]["by_lane"]["pydantic-ai-agent"]["extension_events"]
+    assert pa_ext["framework_extension"] >= 1
+    assert pa_ext["provider_extension"] == 0
+
+    # Deferred tool: TOOL-001 defers (approval-required); the terminal is requires_action and no
+    # tool executed - distinct from lanes that represent a direct tool call.
+    tool_view = by_id["TOOL-001"]["by_lane"]["pydantic-ai-agent"]
+    assert tool_view["status"] in ("PASS", "PASS_WITH_EXTENSION")

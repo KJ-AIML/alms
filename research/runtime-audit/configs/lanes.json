@@ -7,6 +7,7 @@
     { "lane_id": "gemini-native", "runtime_layer": "google-genai", "provider": "google", "model": null, "transport": "direct" },
     { "lane_id": "litellm-sdk", "runtime_layer": "litellm-sdk", "provider": "openai", "model": null, "transport": "direct" },
     { "lane_id": "litellm", "runtime_layer": "litellm", "provider": "openai", "model": null, "transport": "gateway" },
+    { "lane_id": "pydantic-ai-agent", "runtime_layer": "pydantic-ai-agent", "provider": "openai", "model": null, "transport": "direct" },
     { "lane_id": "pydanticai-openai", "runtime_layer": "pydantic-ai", "provider": "openai", "model": null, "transport": "direct" },
     { "lane_id": "mirascope-openai", "runtime_layer": "mirascope", "provider": "openai", "model": null, "transport": "direct" }
   ]

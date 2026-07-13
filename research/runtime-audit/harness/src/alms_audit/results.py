@@ -31,6 +31,7 @@ _TERMINAL_CATEGORY = {
     "cancelled": "cancelled",
     "requires_action": "requires_action",
     "tool_use": "requires_action",
+    "tool_call": "requires_action",  # PydanticAI FinishReason (singular); deferred/approval-required
     "budget_exceeded": "budget_exceeded",
     "refusal": "refusal",
     "content_filter": "refusal",

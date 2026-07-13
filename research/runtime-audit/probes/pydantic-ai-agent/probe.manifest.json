@@ -1,0 +1,38 @@
+{
+  "audit_protocol_version": "alms.dev/probe-protocol/v0",
+  "probe_id": "pydantic-ai-agent",
+  "runtime_layer": "pydantic-ai-agent",
+  "runtime_packages": ["pydantic-ai-slim==2.9.0"],
+  "api_surface": "PydanticAI Agent (primary): Agent graph (agent.iter nodes), FunctionModel offline seam, framework message/part model (ModelRequest/ModelResponse/parts), NativeOutput structured strategy, approval-required/deferred tools (DeferredToolRequests), run_stream_events framework events, RunUsage aggregation, ModelResponse.model_name identity, framework terminal states, framework exception hierarchy. The low-level direct API is NOT the primary surface.",
+  "sdk_version": "pydantic-ai-slim 2.9.0 (pydantic_ai 2.9.0; pydantic-graph; python >=3.13)",
+  "boundary": "PydanticAI Agent ONLY. This lane does NOT audit the Pydantic AI Gateway, Pydantic Evals, Pydantic Graph as a standalone product, MCP servers, durable-execution integrations, Logfire, OpenTelemetry export, or provider-native semantics. No custom provider endpoint is configured and no Router/FallbackModel is used.",
+  "credential_env_vars": ["OPENAI_API_KEY"],
+  "configuration_keys": ["model", "timeout_ms", "max_output_tokens", "mock_mode"],
+  "claimed_feature_support": {
+    "note": "PydanticAI Agent operations implemented in this probe. A framework operation succeeding OFFLINE says nothing about live provider semantics or model support; both remain UNVERIFIED until a live run (DevSpec Section 55). PydanticAI's framework-owned behavior (message/part model, output-strategy selection, validation, deferred-tool handling, usage aggregation, stream events, graph nodes, terminal states, exceptions) is the audit subject, not a capability claim.",
+    "generation": "framework_operation_implemented (Agent + FunctionModel, agent.iter graph)",
+    "roles": "framework_operation_implemented (system message -> Agent instructions -> framework InstructionPart; distinguished from provider-native system instructions)",
+    "structured_output": "framework_operation_implemented (NativeOutput selected explicitly via a SYNTHETIC model profile advertising supports_json_schema_output; output_mode observed 'native'; generated JSON Schema + framework parse/validate recorded; NO silent fallback to ToolOutput/PromptedOutput)",
+    "tools": "framework_operation_implemented (approval-required tool via ApprovalRequiredToolset; one ToolCallPart emitted; run output = DeferredToolRequests; tool body NOT executed; model invocations = 1, second model turn = 0)",
+    "streaming": "framework_operation_implemented (run_stream_events framework event lifecycle: PartStartEvent/PartDeltaEvent/PartEndEvent/FinalResultEvent/AgentRunResultEvent; graph nodes captured separately via agent.iter)",
+    "usage": "framework_operation_implemented (ModelResponse RequestUsage [fixture_expected offline] kept distinct from Agent RunUsage aggregation [framework_native]; absent stays absent, never 0)",
+    "errors": "framework_operation_implemented (PydanticAI exception hierarchy captured as evidence; DeferredToolRequests is a terminal state, NOT an error)"
+  },
+  "model_support_status": "unverified_until_live",
+  "supported_modes": ["offline_mock", "live"],
+  "framework_boundary_notes": [
+    "PydanticAI's Agent output (messages, parts, usage aggregation, model_name, terminal states, exceptions) is FRAMEWORK-owned (framework_native). Framework message parts are NEVER labelled provider-native, even when a value resembles a provider's.",
+    "The only model used offline is FunctionModel (PydanticAI's own explicit-control test seam). ALLOW_MODEL_REQUESTS is set False before any Agent runs, and a network tripwire blocks sockets. TestModel is deliberately NOT the primary evidence generator (it auto-synthesizes schema-valid data and auto-calls tools, hiding framework behavior).",
+    "The offline FunctionModel exposes a SYNTHETIC model_name distinct from the requested model, so requested != observed is recorded (model_identity_match=false), non-failing, with offline source fixture_expected. The requested model is never copied into the observed field.",
+    "NativeOutput native structured-output support is advertised by a SYNTHETIC offline model profile (supports_json_schema_output=True) set by the probe, NOT inferred from any real provider. Offline this proves only that PydanticAI selected NativeOutput, generated the schema, prepared native-output request parameters, passed them to FunctionModel, and parsed/validated the synthetic response; a real provider accepting/following native JSON schema is unverified_until_live.",
+    "Full logfire and the OpenTelemetry SDK/exporter are NOT installed (only the inert logfire-api and opentelemetry-api interface shims are present as transitive dependencies), so no telemetry can leave the process. Provider model integrations (openai/anthropic/google) require vendor SDKs that are absent in this slim install, so a real provider model cannot be constructed."
+  ],
+  "known_limitations": [
+    "No live evidence exists yet; all P0.7B verification is offline via PydanticAI's own FunctionModel seam, which runs the real Agent graph, message/part model, output-strategy selection, validation, deferred-tool handling, usage aggregation, and stream events without the network.",
+    "Real provider request shape/headers/routing/alias resolution/structured-output adherence/tool-call selection/retry behavior/streaming behavior/usage accuracy/error taxonomy from a network response stay unverified_until_live.",
+    "Output-validation retries, tool retries, and per-tool retries are all zero, and a one-model-request usage limit is applied; the Pydantic AI Gateway is never used and Logfire/OpenTelemetry export is never enabled.",
+    "The probe emits raw evidence and a minimal manifest only; normalization is a harness stage.",
+    "run_stream_events and agent.iter are two DISTINCT single-request exercises of the stream fixture (framework events vs graph nodes); neither is a retry of the other."
+  ],
+  "run_command": "uv run --project probes/pydantic-ai-agent python -m probe <request.json>"
+}

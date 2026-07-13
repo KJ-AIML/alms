@@ -16,6 +16,7 @@ from alms_audit.normalizers import gemini as gemini_nz
 from alms_audit.normalizers import langchain as langchain_nz
 from alms_audit.normalizers import litellm as litellm_nz
 from alms_audit.normalizers import openai as openai_nz
+from alms_audit.normalizers import pydanticai as pydanticai_nz
 from alms_audit.results import interpret
 from alms_audit.schemas import default_root, is_valid
 
@@ -391,3 +392,55 @@ def test_litellm_missing_model_unavailable_not_requested():
 def test_litellm_stream_model_from_aggregate():
     env = {"capture_kind": "stream", "aggregate": {"model": "gpt-stream-x"}, "chunks": []}
     assert litellm_nz.extract_model_identity("stream", env) == "gpt-stream-x"
+
+
+# --- PydanticAI Agent -----------------------------------------------------------------
+def _pydanticai(model):
+    env = {"capture_kind": "response", "agent_run_usage": {"input_tokens": 1, "output_tokens": 1}}
+    if model is not None:
+        env["model_name"] = model
+    return env
+
+
+def test_pydanticai_model_never_provider_native():
+    # PydanticAI's ModelResponse.model_name is framework-exposed: even offline it is
+    # fixture_expected, and its LIVE source is framework_native, NEVER provider_native.
+    assert pydanticai_nz.MODEL_IDENTITY_LIVE_SOURCE == provenance.FRAMEWORK_NATIVE
+    mi = _identity(_pydanticai("gpt-4o-like"), pydanticai_nz).result["observed_model_identity"]
+    assert mi["observed_returned_model"] == "gpt-4o-like"
+    assert mi["observed_returned_model_source"] == provenance.FIXTURE_EXPECTED  # offline
+    assert mi["observed_returned_model_source"] != provenance.PROVIDER_NATIVE
+
+
+def test_pydanticai_live_model_is_framework_native():
+    mi = _identity(_pydanticai("gpt-4o-like"), pydanticai_nz, execution_mode="live").result[
+        "observed_model_identity"
+    ]
+    assert mi["observed_returned_model_source"] == provenance.FRAMEWORK_NATIVE
+
+
+def test_pydanticai_synthetic_mismatch_recorded_not_error():
+    # The offline FunctionModel exposes a synthetic model_name distinct from the requested model:
+    # requested != observed is recorded (match=false), non-failing, no canonicalization.
+    out = _identity(
+        _pydanticai("function:offline-synthetic-model"),
+        pydanticai_nz,
+        requested_model="openai:gpt-4o",
+    )
+    mi = out.result["observed_model_identity"]
+    assert (mi["requested_model"], mi["observed_returned_model"]) == (
+        "openai:gpt-4o",
+        "function:offline-synthetic-model",
+    )
+    assert mi["model_identity_match"] == "false"
+    # A mismatch is non-failing (PydanticAI always carries framework_extension graph metadata).
+    assert out.status in ("PASS", "PASS_WITH_EXTENSION")
+    assert out.result["status"] not in ("ERROR_RUNTIME", "FAIL_INVARIANT")
+
+
+def test_pydanticai_missing_model_unavailable_not_requested():
+    mi = _identity(_pydanticai(None), pydanticai_nz, requested_model="req").result[
+        "observed_model_identity"
+    ]
+    assert mi["observed_returned_model"] is None  # requested never copied into framework metadata
+    assert mi["observed_returned_model_source"] == provenance.UNAVAILABLE

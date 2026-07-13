@@ -59,6 +59,7 @@ _PROBE_BY_RUNTIME = {
     "anthropic": "anthropic-native",
     "google-genai": "gemini-native",
     "litellm-sdk": "litellm-sdk",
+    "pydantic-ai-agent": "pydantic-ai-agent",
 }
 
 
