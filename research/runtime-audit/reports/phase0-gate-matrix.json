@@ -1,0 +1,207 @@
+{
+  "spec": "alms.dev/phase0-gate-matrix/v0",
+  "generated_offline": true,
+  "disclaimer": "Phase 0 gate matrix (P0.7C). Quality gates G0-G7 per DevSpec Section 97; exit checklist per Section 110. Phase 0 is NOT complete. G2 and G3 are blocked_credential; G7 is not_started and downstream of completed live evidence plus P0-E1 revision.",
+  "gates": [
+    {
+      "id": "G0",
+      "requirement": "Entry gate: baseline manifest, clean scope acknowledgment, preflight checklist recorded.",
+      "status": "satisfied",
+      "evidence": "docs/ENTRY_GATE.md; evidence/baseline-manifest.json",
+      "blocker": null,
+      "action_required": "Recorded caveat: full production pytest requires optional extras (non-blocking for audit lab)."
+    },
+    {
+      "id": "G1",
+      "requirement": "Harness foundation: offline tests green, schemas validate, live runner fail-closed.",
+      "status": "satisfied_offline",
+      "evidence": "harness/tests/*; alms-audit validate; probes/*/tests",
+      "blocker": null,
+      "action_required": null
+    },
+    {
+      "id": "G2",
+      "requirement": "Control pair: OpenAI native + LangChain base live cases captured.",
+      "status": "blocked_credential",
+      "evidence": "docs/P0.4C_LIVE_ACCEPTANCE.md BLOCKED_CREDENTIAL; zero provider calls attempted",
+      "blocker": "No direct OPENAI_API_KEY; OpenRouter/custom base URL must not substitute for OpenAI Native.",
+      "action_required": "Minimum live validation: openai-native + langchain (direct OpenAI through LangChain) against same direct OpenAI provider."
+    },
+    {
+      "id": "G3",
+      "requirement": "Vendor diversity: at least one non-OpenAI native lane live.",
+      "status": "blocked_credential",
+      "evidence": "Six lanes offline_mock complete; no live anthropic-native or gemini-native evidence",
+      "blocker": "No direct Anthropic or Gemini credentials in offline environment.",
+      "action_required": "Minimum live validation: one non-OpenAI native lane (anthropic-native recommended: GEN-001 + USAGE-001)."
+    },
+    {
+      "id": "G4",
+      "requirement": "Core matrix: all required base feature groups executed or blocked with reason.",
+      "status": "satisfied_offline",
+      "evidence": "reports/protocol-neutrality-matrix.json fixture_coverage: six fixtures x six lanes; harness/tests/test_lane_dispatch.py",
+      "blocker": null,
+      "action_required": "Live execution of mandatory feature groups remains pending_live."
+    },
+    {
+      "id": "G5",
+      "requirement": "Stress evidence: cancellation/timeout/parallel/retry captured where applicable.",
+      "status": "pending_live",
+      "evidence": "Offline retry/request-limit ownership proven (zero-retry measured); CANCEL-001/TIMEOUT-001/RETRY-001 excluded from first-live tier",
+      "blocker": "Stress fixtures not authorized for first live tranche.",
+      "action_required": "Defer CANCEL/TIMEOUT/RETRY live until after minimum live core tranche; document explicit deferral."
+    },
+    {
+      "id": "G6",
+      "requirement": "Unexpected finding: at least one KJ-accepted F1 finding.",
+      "status": "satisfied_offline",
+      "evidence": "N-01 and N-02 accepted F1 per docs/P0.6C_PROTOCOL_NEUTRALITY_AUDIT.md Human Finding Acceptance",
+      "blocker": null,
+      "action_required": "Does not substitute for live exit gates."
+    },
+    {
+      "id": "G7",
+      "requirement": "Evidence revision P0-E1 verifies; reports complete; baseline still green.",
+      "status": "not_started",
+      "evidence": "evidence/P0-E1/ absent",
+      "blocker": "Downstream of G2/G3: P0-E1 revision not created until required live evidence exists.",
+      "action_required": "Create sanitized P0-E1 after minimum live validation (G2/G3) completes."
+    },
+    {
+      "id": "EXIT-01",
+      "requirement": "Stable baseline preserved.",
+      "status": "satisfied_offline",
+      "evidence": "evidence/baseline-manifest.json; production src/ unchanged by audit work",
+      "blocker": null,
+      "action_required": "Re-run baseline regression at Phase 0 exit."
+    },
+    {
+      "id": "EXIT-02",
+      "requirement": "Required lanes executed or blocked with reasons.",
+      "status": "satisfied_offline",
+      "evidence": "Six lanes with probe manifests, offline six-fixture simulations, documented blockers for live",
+      "blocker": null,
+      "action_required": "Live execution blocked_credential for all lanes."
+    },
+    {
+      "id": "EXIT-03",
+      "requirement": "At least one non-OpenAI native lane executed live.",
+      "status": "blocked_credential",
+      "evidence": "anthropic-native and gemini-native offline only",
+      "blocker": "No provider credentials.",
+      "action_required": "Minimum live plan: anthropic-native subset."
+    },
+    {
+      "id": "EXIT-04",
+      "requirement": "Mandatory feature groups have evidence.",
+      "status": "satisfied_offline",
+      "evidence": "GEN/ROLE/STR/TOOL/STREAM/USAGE offline across six lanes",
+      "blocker": null,
+      "action_required": "Live evidence for same subset pending."
+    },
+    {
+      "id": "EXIT-05",
+      "requirement": "Raw and normalized evidence preserved.",
+      "status": "satisfied_offline",
+      "evidence": "Probe subprocess raw-before-normalized ordering; run manifest + transcript + result schemas",
+      "blocker": null,
+      "action_required": null
+    },
+    {
+      "id": "EXIT-06",
+      "requirement": "Cost ledger complete.",
+      "status": "satisfied_offline",
+      "evidence": "cost_estimated from pricing snapshots offline; cost_reported null; upper-bound planning in P0.4C",
+      "blocker": null,
+      "action_required": "Live billed cost N/A until live runs."
+    },
+    {
+      "id": "EXIT-07",
+      "requirement": "Result matrix complete with no blank cells.",
+      "status": "satisfied_offline",
+      "evidence": "reports/protocol-neutrality-matrix.json: 18 dimensions x 6 lanes",
+      "blocker": null,
+      "action_required": "Live cells remain unverified_until_live where marked."
+    },
+    {
+      "id": "EXIT-08",
+      "requirement": "At least one F1 CONTRACT_CHANGING finding accepted by KJ.",
+      "status": "satisfied",
+      "evidence": "N-01, N-02 accepted F1 (P0.6C)",
+      "blocker": null,
+      "action_required": null
+    },
+    {
+      "id": "EXIT-09",
+      "requirement": "Q-001 recommendation complete.",
+      "status": "deferred",
+      "evidence": "Offline structured-output strategy comparison across six lanes in neutrality matrix",
+      "blocker": "Live native structured-output adherence unverified.",
+      "action_required": "Evidence-backed recommendation after live STR-001 on native + framework lanes."
+    },
+    {
+      "id": "EXIT-10",
+      "requirement": "Q-002 recommendation complete.",
+      "status": "deferred",
+      "evidence": "Cancellation fixtures excluded from first-live tier; client-side action model documented",
+      "blocker": "No live CANCEL-001 evidence.",
+      "action_required": "Explicit evidence-backed deferral or post-minimum-live cancellation experiment."
+    },
+    {
+      "id": "EXIT-11",
+      "requirement": "Q-003 recommendation complete.",
+      "status": "deferred",
+      "evidence": "Offline event vocabulary + extension model proven; streaming marked unverified_until_live",
+      "blocker": "Provider-native event ordering not observed live.",
+      "action_required": "Live STREAM-001 on openai-native + one framework lane."
+    },
+    {
+      "id": "EXIT-12",
+      "requirement": "Q-005 recommendation complete or explicit evidence-backed deferral.",
+      "status": "deferred",
+      "evidence": "EMBED-001 excluded; embedding scope not in six-fixture base set",
+      "blocker": "Embedding lane not in Phase 0 six-lane scope.",
+      "action_required": "Document explicit deferral of EmbeddingRuntime to post-Phase-0 sibling DevSpec."
+    },
+    {
+      "id": "EXIT-13",
+      "requirement": "Two proof adapters selected for Phase 1A.",
+      "status": "not_started",
+      "evidence": "Selection pending Phase 0 exit synthesis input",
+      "blocker": "Live evidence incomplete.",
+      "action_required": "Select after minimum live validation; candidates: openai-native + langchain per control pair."
+    },
+    {
+      "id": "EXIT-14",
+      "requirement": "Required semantic conformance subset selected.",
+      "status": "not_started",
+      "evidence": "DevSpec Section 110 unchecked",
+      "blocker": "Depends on live evidence and Q-001..Q-003.",
+      "action_required": "Define subset after live core tranche."
+    },
+    {
+      "id": "EXIT-15",
+      "requirement": "Evidence revision P0-E1 verifies.",
+      "status": "not_started",
+      "evidence": "evidence/P0-E1/ absent",
+      "blocker": "Downstream of G2/G3 live evidence.",
+      "action_required": "Create P0-E1 after required live evidence exists."
+    },
+    {
+      "id": "EXIT-16",
+      "requirement": "Baseline regression commands green.",
+      "status": "satisfied_offline",
+      "evidence": "Audit harness and probes green; production baseline caveat recorded in ENTRY_GATE",
+      "blocker": null,
+      "action_required": "Reconfirm at exit."
+    },
+    {
+      "id": "EXIT-17",
+      "requirement": "Phase 1 Entry Decision approved.",
+      "status": "not_started",
+      "evidence": "Phase 0 exit gates incomplete",
+      "blocker": "Mandatory live gates unsatisfied.",
+      "action_required": "Human approval after live gates and P0-E1."
+    }
+  ]
+}

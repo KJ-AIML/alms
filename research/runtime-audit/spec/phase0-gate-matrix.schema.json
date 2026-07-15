@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "alms.dev/phase0-gate-matrix/v0",
+  "title": "Phase 0 Gate Matrix v0",
+  "$comment": "AUDIT INFRASTRUCTURE ONLY (P0.7C). Machine-readable record of entry, quality, and exit gates. Status vocabulary is documentation governance only; it does not claim Phase 0 complete while mandatory live gates remain unsatisfied.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["spec", "generated_offline", "disclaimer", "gates"],
+  "properties": {
+    "spec": { "const": "alms.dev/phase0-gate-matrix/v0" },
+    "generated_offline": { "const": true },
+    "disclaimer": { "type": "string", "minLength": 1 },
+    "gates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "requirement", "status", "evidence"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "requirement": { "type": "string", "minLength": 1 },
+          "status": {
+            "type": "string",
+            "enum": [
+              "satisfied",
+              "satisfied_offline",
+              "blocked_credential",
+              "pending_live",
+              "deferred",
+              "not_started"
+            ]
+          },
+          "evidence": { "type": "string", "minLength": 1 },
+          "blocker": { "type": ["string", "null"] },
+          "action_required": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}
