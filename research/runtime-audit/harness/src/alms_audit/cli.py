@@ -1,6 +1,6 @@
 """alms-audit — internal research CLI for the Phase 0 Runtime Audit Lab.
 
-Commands: validate, list-fixtures, list-lanes, plan, run. Through P0.2 every command is
+Commands: validate, lint-fixtures, list-fixtures, list-lanes, plan, run. Through P0.2 every command is
 offline: `run` is dry-run by default and a live run is refused without both --live and
 --confirm-live plus a valid budget. It performs NO live calls and is NOT part of the
 public `alms` CLI.
@@ -17,11 +17,12 @@ from . import __version__, runner
 from .budget import BudgetError
 from .config import approved_fixtures, load_config, load_config_path, load_raw
 from .environment import credential_presence, sha256_file
-from .fixtures import duplicate_ids, load_fixtures
+from .fixture_lint import format_report, lint_fixtures
+from .fixtures import load_fixtures
 from .lanes import load_lanes
 from .planner import build_plan
 from .pricing import CostError, load_snapshots
-from .schemas import SCHEMA_FILES, spec_dir, validation_errors, validator_for
+from .schemas import SCHEMA_FILES, spec_dir, validator_for
 from .selection import (
     SelectionError,
     parse_fixture_ids,
@@ -57,21 +58,15 @@ def cmd_validate(args: argparse.Namespace) -> int:
             ok = False
             print(f"FAIL schema {name}: {exc}")
 
-    # 2. Every fixture must validate against the fixture schema.
-    fixtures = load_fixtures(root)
-    for fx in fixtures:
-        errors = validation_errors("fixture", fx.data, root)
-        if errors:
-            ok = False
-            print(f"FAIL fixture {fx.path.name}: {'; '.join(errors)}")
-        else:
+    # 2. Fixture corpus lint (schema, duplicates, invariants).
+    lint_report = lint_fixtures(root)
+    if lint_report.ok:
+        for fx in load_fixtures(root):
             print(f"ok   fixture {fx.id}")
-
-    # 2b. Fixture IDs must be unique across the whole corpus.
-    dups = duplicate_ids(fixtures)
-    if dups:
+        print(format_report(lint_report))
+    else:
         ok = False
-        print(f"FAIL duplicate fixture ids: {', '.join(dups)}")
+        print(format_report(lint_report))
 
     # 3. Lane config sanity (three independent identifiers must be present).
     for lane in load_lanes(root):
@@ -82,6 +77,15 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
     print("PASS" if ok else "FAIL")
     return 0 if ok else 1
+
+
+def cmd_lint_fixtures(args: argparse.Namespace) -> int:
+    report = lint_fixtures(args.root)
+    print(format_report(report))
+    if report.ok:
+        count = len(load_fixtures(args.root))
+        print(f"ok   {count} fixture(s)")
+    return 0 if report.ok else 1
 
 
 def cmd_list_fixtures(args: argparse.Namespace) -> int:
@@ -214,6 +218,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     for name, func in (
         ("validate", cmd_validate),
+        ("lint-fixtures", cmd_lint_fixtures),
         ("list-lanes", cmd_list_lanes),
         ("plan", cmd_plan),
     ):
