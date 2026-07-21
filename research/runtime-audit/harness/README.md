@@ -18,17 +18,24 @@ cd research/runtime-audit/harness
 uv sync
 ```
 
-## Commands (P0.1)
+## Commands
 
 ```bash
-uv run alms-audit validate        # schemas well-formed + all fixtures valid + lanes sane
-uv run alms-audit list-fixtures   # id / feature / summary
-uv run alms-audit list-lanes      # lane_id / runtime_layer / provider
+uv run alms-audit validate
+uv run alms-audit lint-fixtures
+uv run alms-audit list-fixtures
+uv run alms-audit list-lanes
+uv run alms-audit plan
+uv run alms-audit run                 # dry-run by default
+uv run alms-audit normalize --run <ID>
+uv run alms-audit evaluate --run <ID>
+uv run alms-audit summarize --run <ID>
+uv run alms-audit verify-evidence --revision P0-E1
 ```
 
 `--root PATH` points the CLI at an alternate `runtime-audit/` directory (used by the
-Windows-path-with-spaces test). Later slices add `plan`, `run`, `normalize`,
-`evaluate`, `summarize`, `verify-evidence` (DevSpec Section 38).
+Windows-path-with-spaces test). Post-run commands operate on recorded artifacts only and
+make no provider calls (DevSpec Section 38).
 
 ## Tests
 

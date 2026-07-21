@@ -1,14 +1,15 @@
 """alms-audit — internal research CLI for the Phase 0 Runtime Audit Lab.
 
-Commands: validate, lint-fixtures, list-fixtures, list-lanes, plan, run. Through P0.2 every command is
-offline: `run` is dry-run by default and a live run is refused without both --live and
---confirm-live plus a valid budget. It performs NO live calls and is NOT part of the
-public `alms` CLI.
+Commands: validate, lint-fixtures, list-fixtures, list-lanes, plan, run, normalize,
+evaluate, summarize, verify-evidence. Offline by default: `run` is dry-run unless
+--live/--confirm-live (plus budget). Post-run commands operate on recorded artifacts
+only. NOT part of the public `alms` CLI.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,6 +22,13 @@ from .fixture_lint import format_report, lint_fixtures
 from .fixtures import load_fixtures
 from .lanes import load_lanes
 from .planner import build_plan
+from .postprocess import (
+    PostprocessError,
+    evaluate_run,
+    normalize_run,
+    summarize_run,
+    verify_evidence,
+)
 from .pricing import CostError, load_snapshots
 from .schemas import SCHEMA_FILES, spec_dir, validator_for
 from .selection import (
@@ -211,6 +219,78 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_normalize(args: argparse.Namespace) -> int:
+    try:
+        report = normalize_run(args.run, args.root)
+    except PostprocessError as exc:
+        print(f"REFUSED: {exc}")
+        return 2
+    print(f"normalize: run {report['run_id']}")
+    for e in report["fixtures"]:
+        reason = e.get("reason") or ",".join(e.get("notes") or []) or ""
+        suffix = f" ({reason})" if reason else ""
+        print(f"  {e['fixture_id']}: {e['status']}{suffix}")
+    return 0
+
+
+def cmd_evaluate(args: argparse.Namespace) -> int:
+    try:
+        report = evaluate_run(args.run, args.root)
+    except PostprocessError as exc:
+        print(f"REFUSED: {exc}")
+        return 2
+    print(f"evaluate: run {report['run_id']}")
+    exit_code = 0
+    for e in report["fixtures"]:
+        failed = e.get("failed") or []
+        pending = e.get("pending") or []
+        extra = []
+        if failed:
+            extra.append(f"failed={failed}")
+            exit_code = 1
+        if pending:
+            extra.append(f"pending={pending}")
+        suffix = f" ({'; '.join(extra)})" if extra else ""
+        print(f"  {e['fixture_id']}: {e['status']}{suffix}")
+    return exit_code
+
+
+def cmd_summarize(args: argparse.Namespace) -> int:
+    try:
+        summary = summarize_run(args.run, args.root)
+    except PostprocessError as exc:
+        print(f"REFUSED: {exc}")
+        return 2
+    print(f"run_id: {summary.get('run_id')}")
+    print(f"mode: {summary.get('mode')}")
+    print(f"lane_id: {summary.get('lane_id')}")
+    print(f"model: {summary.get('model')}")
+    print(f"expected live call count: {summary.get('expected_call_count')}")
+    print(f"secret_scan: {summary.get('secret_scan')}")
+    for e in summary.get("fixtures") or []:
+        print(f"  fixture {e.get('fixture_id')}: {e.get('status')}")
+    if args.json:
+        print(json.dumps(summary, indent=2, sort_keys=True))
+    return 0
+
+
+def cmd_verify_evidence(args: argparse.Namespace) -> int:
+    report = verify_evidence(args.revision, args.root)
+    print(f"revision: {report['revision']}")
+    print(f"path: {report['path']}")
+    print(f"status: {report['status']}")
+    if report.get("detail"):
+        print(f"detail: {report['detail']}")
+    for check in report.get("hash_checks") or []:
+        mark = "ok" if check.get("ok") else "FAIL"
+        print(f"  {mark} {check.get('path')}: {check.get('detail') or check.get('hash')}")
+    if report["status"] == "PASS":
+        return 0
+    if report["status"] == "NOT_FOUND":
+        return 2  # honest absence (e.g. P0-E1 not_started)
+    return 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="alms-audit", description=__doc__)
     parser.add_argument("--version", action="version", version=f"alms-audit {__version__}")
@@ -257,6 +337,25 @@ def build_parser() -> argparse.ArgumentParser:
         "--confirm-live", action="store_true", help="explicit confirmation for a live run"
     )
     run_p.set_defaults(func=cmd_run)
+
+    for name, func, help_text in (
+        ("normalize", cmd_normalize, "re-normalize raw evidence for a recorded run"),
+        ("evaluate", cmd_evaluate, "evaluate deterministic invariants for a recorded run"),
+        ("summarize", cmd_summarize, "print a recorded run summary"),
+    ):
+        p = sub.add_parser(name, help=help_text)
+        _add_root(p)
+        p.add_argument("--run", required=True, help="run id under runs/")
+        if name == "summarize":
+            p.add_argument("--json", action="store_true", help="also emit the full summary JSON")
+        p.set_defaults(func=func)
+
+    ve = sub.add_parser(
+        "verify-evidence", help="verify a committed evidence revision (hashes / presence)"
+    )
+    _add_root(ve)
+    ve.add_argument("--revision", required=True, help="evidence revision id (e.g. P0-E1)")
+    ve.set_defaults(func=cmd_verify_evidence)
 
     return parser
 
