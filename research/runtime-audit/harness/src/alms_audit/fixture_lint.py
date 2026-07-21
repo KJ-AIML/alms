@@ -1,13 +1,18 @@
-"""Offline fixture corpus lint (DevSpec Tier 0 / Sections 21, 44, 79).
+"""Offline fixture corpus lint (DevSpec Tier 0 / Sections 21, 44, 79; P0.3 acceptance).
 
 Validates every JSON under ``<root>/fixtures/`` against the fixture schema, checks for
 duplicate IDs, requires non-empty ``expected_invariants``, and ensures every invariant
-key is a known evaluator name (DevSpec Section 44 examples plus the committed corpus
-union) or is listed in ``PENDING_EVALUATORS`` / ``MANUAL_REVIEW``.
+key is either a DevSpec Section 44 deterministic evaluator, an explicit
+``PENDING_EVALUATORS`` entry, or an explicit ``MANUAL_REVIEW`` marker.
+
+Also scans for provider-specific SDK method syntax in common fixtures, validates
+capability vocabulary, and checks ``cost_class=offline`` vs ``live_required`` consistency.
 """
 
 from __future__ import annotations
 
+import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -31,10 +36,80 @@ DEVSPEC_EVALUATORS: frozenset[str] = frozenset(
 )
 
 # Evaluator names declared in fixtures but not yet implemented in harness/invariants/.
-PENDING_EVALUATORS: frozenset[str] = frozenset()
+# evaluate_invariants returns mode=manual_review / detail=pending evaluator for these.
+PENDING_EVALUATORS: frozenset[str] = frozenset(
+    {
+        "argument_fragments_associated",
+        "backoff_behavior_recorded",
+        "caller_termination_observed",
+        "candidate_category_recorded",
+        "content_part_mapping_recorded",
+        "continuation_after_tool_result",
+        "distinct_call_ids_recorded",
+        "embedding_dimensions_present",
+        "final_status_present",
+        "hidden_retry_detectable",
+        "incremental_text",
+        "native_error_preserved",
+        "nested_values_preserved",
+        "observed_structured_mode_recorded",
+        "outbound_attempts_observed",
+        "parallel_support_recorded",
+        "partial_final_semantics_marked",
+        "provider_work_evidence_recorded",
+        "result_semantics_recorded",
+        "retry_count_observed",
+        "retry_interaction_recorded",
+        "schema_transformations_recorded",
+        "stable_call_linkage",
+        "stream_started",
+        "system_instruction_represented",
+        "timeout_category_present",
+        "timeout_owner_recorded",
+        "tool_call_identity_preserved",
+        "tool_choice_respected",
+        "usage_finality_marked",
+        "usage_metadata_recorded",
+        "usage_presence_recorded",
+        "usage_provenance_recorded",
+        "usage_timing_recorded",
+        "validation_location_recorded",
+        "vector_output_shape_recorded",
+    }
+)
 
 # Invariant keys that require explicit human review rather than automation.
 MANUAL_REVIEW: frozenset[str] = frozenset()
+
+# Committed capability vocabulary (aligned with fixture.schema.json feature enum).
+CAPABILITY_VOCABULARY: frozenset[str] = frozenset(
+    {
+        "generation",
+        "roles",
+        "structured_output",
+        "tools",
+        "streaming",
+        "cancellation",
+        "timeout",
+        "retry",
+        "errors",
+        "usage",
+        "embeddings",
+        "multimodal",
+    }
+)
+
+# Provider/SDK method syntax that must not appear in common (non-extension) fixture text.
+_PROVIDER_SYNTAX_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\bopenai\.responses\.create\b"),
+    re.compile(r"\bopenai\.chat\.completions\.create\b"),
+    re.compile(r"\banthropic\.messages\.create\b"),
+    re.compile(r"\bChatOpenAI\b"),
+    re.compile(r"\blitellm\.completion\b"),
+    re.compile(r"\bgoogle\.genai\b"),
+    re.compile(r"\bgenai\.Client\b"),
+    re.compile(r"\bpydantic_ai\.Agent\b"),
+)
 
 
 @dataclass(frozen=True)
@@ -72,27 +147,52 @@ def allowed_invariant_keys(
 ) -> frozenset[str]:
     """Return evaluator names permitted in ``expected_invariants``.
 
-    Keys come from DevSpec Section 44 examples, every key used in the reference
-    fixture corpus (defaults to the package's committed ``fixtures/`` tree), plus
-    explicit ``PENDING_EVALUATORS`` and ``MANUAL_REVIEW`` entries.
+    P0.3 acceptance requires every key to be a deterministic evaluator or an *explicit*
+    pending/manual marker. Corpus keys are not auto-allowed merely by appearing on disk.
     """
-    if fixtures is None:
-        from .schemas import default_root
+    del fixtures, reference_root  # retained for call-site compatibility; unused by design
+    return DEVSPEC_EVALUATORS | extra_pending | extra_manual
 
-        fixtures = load_fixtures(reference_root or default_root())
-    return DEVSPEC_EVALUATORS | corpus_invariant_keys(fixtures) | extra_pending | extra_manual
+
+def _scan_provider_syntax(fx: Fixture) -> list[str]:
+    """Return messages for provider-specific SDK syntax outside the extension object."""
+    data = {k: v for k, v in fx.data.items() if k != "extension"}
+    blob = json.dumps(data, ensure_ascii=False, sort_keys=True)
+    hits: list[str] = []
+    for pattern in _PROVIDER_SYNTAX_PATTERNS:
+        match = pattern.search(blob)
+        if match:
+            hits.append(f"provider-specific method syntax: {match.group(0)}")
+    return hits
+
+
+def _check_capabilities(fx: Fixture) -> list[str]:
+    caps = (fx.data.get("requirements") or {}).get("capabilities") or []
+    bad = [c for c in caps if c not in CAPABILITY_VOCABULARY]
+    if not bad:
+        return []
+    return [f"unknown capability name(s): {', '.join(sorted(bad))}"]
+
+
+def _check_live_mock_consistency(fx: Fixture) -> list[str]:
+    cost = fx.data.get("cost_class")
+    req = fx.data.get("requirements") or {}
+    live = req.get("live_required")
+    if cost == "offline" and live is not False:
+        return ["cost_class offline requires live_required false"]
+    if live is False and cost not in ("offline", None) and req.get("supports_mock_mode") is False:
+        return ["live_required false with supports_mock_mode false is inconsistent"]
+    return []
 
 
 def lint_fixtures(root: Path | None = None, *, reference_root: Path | None = None) -> LintReport:
     """Run all Tier-0 fixture lint checks against ``root`` (default: package corpus)."""
-    from .schemas import default_root
-
+    del reference_root  # allowed keys no longer depend on a reference corpus union
     issues: list[LintIssue] = []
     fixtures = load_fixtures(root)
-    ref = reference_root if reference_root is not None else (root or default_root())
-    allowed = allowed_invariant_keys(reference_root=ref)
+    allowed = allowed_invariant_keys()
 
-    for fx in fixtures:
+    for fx in sorted(fixtures, key=lambda f: f.id):
         fid = fx.id
         try:
             schema_errors = validation_errors("fixture", fx.data, root)
@@ -118,13 +218,21 @@ def lint_fixtures(root: Path | None = None, *, reference_root: Path | None = Non
                         "(add to PENDING_EVALUATORS or MANUAL_REVIEW in fixture_lint.py)",
                     )
                 )
+
+            for message in (
+                _scan_provider_syntax(fx)
+                + _check_capabilities(fx)
+                + _check_live_mock_consistency(fx)
+            ):
+                issues.append(LintIssue(fid, fx.path, message))
         except Exception as exc:  # noqa: BLE001 - surface any load/parse failure
             issues.append(LintIssue(fid, fx.path, str(exc)))
 
-    for dup in duplicate_ids(fixtures):
+    for dup in sorted(duplicate_ids(fixtures)):
         first = next(f for f in fixtures if f.id == dup)
         issues.append(LintIssue(dup, first.path, f"duplicate fixture id: {dup}"))
 
+    issues.sort(key=lambda i: (i.fixture_id, i.message))
     return LintReport(issues=issues)
 
 
