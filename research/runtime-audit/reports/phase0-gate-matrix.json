@@ -159,9 +159,9 @@
       "id": "EXIT-12",
       "requirement": "Q-005 recommendation complete or explicit evidence-backed deferral.",
       "status": "deferred",
-      "evidence": "EMBED-001 excluded; embedding scope not in six-fixture base set",
-      "blocker": "Embedding lane not in Phase 0 six-lane scope.",
-      "action_required": "Document explicit deferral of EmbeddingRuntime to post-Phase-0 sibling DevSpec."
+      "evidence": "docs/P0.9_Q005_EMBEDDING_DEFERRAL.md — explicit offline deferral of EmbeddingRuntime to sibling DevSpec; EMBED-001 OPTIONAL / live_required / no offline mock; A-007 remains open",
+      "blocker": null,
+      "action_required": "No further Phase 0 action required for EXIT-12 unless live EMBED-001 is later authorized."
     },
     {
       "id": "EXIT-13",

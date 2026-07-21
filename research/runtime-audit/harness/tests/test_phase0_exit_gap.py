@@ -41,6 +41,9 @@ def test_phase0_gate_matrix_validates():
     g2_action = by_id["G2"]["action_required"] or ""
     assert "langchain-openai" not in g2_action
     assert "langchain" in g2_action
+    exit12 = by_id["EXIT-12"]
+    assert exit12["status"] == "deferred"
+    assert "P0.9_Q005_EMBEDDING_DEFERRAL" in (exit12["evidence"] or "")
     # Phase 0 must not be claimed complete while live gates remain.
     live_blocked = [
         g
