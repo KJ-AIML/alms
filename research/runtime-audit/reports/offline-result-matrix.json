@@ -1,0 +1,72 @@
+{
+  "spec": "alms.dev/offline-result-matrix/v0",
+  "generated_offline": true,
+  "disclaimer": "Offline fixture×lane coverage matrix (P0.10-offline-matrix). Cells are offline_mock or unverified_until_live / not_in_scope / blocked_policy. NOT live provider semantic evidence. Phase 0 is NOT complete.",
+  "fixtures": ["GEN-001", "ROLE-001", "STR-001", "TOOL-001", "STREAM-001", "USAGE-001"],
+  "stress_fixtures_excluded": ["CANCEL-001", "TIMEOUT-001", "RETRY-001", "STREAM-002", "TOOL-004"],
+  "lanes": ["openai-native", "langchain", "anthropic-native", "gemini-native", "litellm-sdk", "pydantic-ai-agent"],
+  "cells": {
+    "openai-native": {
+      "GEN-001": "offline_mock",
+      "ROLE-001": "offline_mock",
+      "STR-001": "offline_mock",
+      "TOOL-001": "offline_mock",
+      "STREAM-001": "offline_mock",
+      "USAGE-001": "offline_mock",
+      "live_core": "blocked_credential",
+      "stress": "pending_live"
+    },
+    "langchain": {
+      "GEN-001": "offline_mock",
+      "ROLE-001": "offline_mock",
+      "STR-001": "offline_mock",
+      "TOOL-001": "offline_mock",
+      "STREAM-001": "offline_mock",
+      "USAGE-001": "offline_mock",
+      "live_core": "blocked_credential",
+      "stress": "pending_live"
+    },
+    "anthropic-native": {
+      "GEN-001": "offline_mock",
+      "ROLE-001": "offline_mock",
+      "STR-001": "offline_mock",
+      "TOOL-001": "offline_mock",
+      "STREAM-001": "offline_mock",
+      "USAGE-001": "offline_mock",
+      "live_core": "blocked_credential",
+      "stress": "pending_live"
+    },
+    "gemini-native": {
+      "GEN-001": "offline_mock",
+      "ROLE-001": "offline_mock",
+      "STR-001": "offline_mock",
+      "TOOL-001": "offline_mock",
+      "STREAM-001": "offline_mock",
+      "USAGE-001": "offline_mock",
+      "live_core": "blocked_credential",
+      "stress": "pending_live"
+    },
+    "litellm-sdk": {
+      "GEN-001": "offline_mock",
+      "ROLE-001": "offline_mock",
+      "STR-001": "offline_mock",
+      "TOOL-001": "offline_partial_path",
+      "STREAM-001": "offline_mock",
+      "USAGE-001": "offline_mock",
+      "live_core": "blocked_credential",
+      "stress": "pending_live",
+      "notes": "TOOL-001 is partial (L-01); not full completion(tools=...)"
+    },
+    "pydantic-ai-agent": {
+      "GEN-001": "offline_mock",
+      "ROLE-001": "offline_mock",
+      "STR-001": "offline_mock",
+      "TOOL-001": "offline_deferred_tool",
+      "STREAM-001": "offline_mock",
+      "USAGE-001": "offline_mock",
+      "live_core": "blocked_policy",
+      "stress": "blocked_policy",
+      "notes": "Live requires vendor SDK absent from slim install; FunctionModel is offline-only"
+    }
+  }
+}
