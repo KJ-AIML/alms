@@ -37,7 +37,7 @@ Draft ModelRuntime v0 is **Phase 1A** and is forbidden until Phase 0 exit.
 | P0.9-q005-deferral | `0700898` | EmbeddingRuntime deferred |
 | P0.8-design | `d7f4869` | design notes only — does NOT satisfy G5 |
 | P0.10-offline-matrix | `d7f4869` | offline-result-matrix.json |
-| P0.11-prep-skeletons | `d7f4869` | TBD skeletons — not final reports |
+| P0.11-prep-skeletons | `d7f4869` | TBD skeletons only — finals are downstream_of_live_evidence (P0-045..P0-047) |
 
 ## Eligible now
 
