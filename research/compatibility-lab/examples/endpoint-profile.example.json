@@ -1,0 +1,17 @@
+{
+  "spec": "alms.dev/endpoint-profile/v0",
+  "endpoint_id": "synthetic-compat-endpoint",
+  "api_family": "openai_compatible",
+  "sdk_family": "openai",
+  "boundary_kind": "gateway",
+  "provider_claim": "unverified-provider-claim",
+  "gateway_claim": "unverified-gateway-claim",
+  "model": "synthetic-model-id",
+  "evidence_class": "custom_endpoint_compatibility",
+  "disclaimer": "Custom endpoint compatibility evidence is not native-provider evidence. It does not satisfy G2 or G3.",
+  "capabilities": {
+    "text_generation": "declared",
+    "streaming": "not_tested",
+    "tool_calls": "not_tested"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "alms.dev/endpoint-profile/v0",
+  "title": "Custom Endpoint Profile",
+  "type": "object",
+  "required": [
+    "spec",
+    "endpoint_id",
+    "api_family",
+    "sdk_family",
+    "boundary_kind",
+    "evidence_class",
+    "disclaimer"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "spec": { "const": "alms.dev/endpoint-profile/v0" },
+    "endpoint_id": { "type": "string", "minLength": 1 },
+    "api_family": {
+      "type": "string",
+      "enum": ["openai_compatible", "anthropic_compatible"]
+    },
+    "sdk_family": {
+      "type": "string",
+      "enum": ["openai", "anthropic"]
+    },
+    "boundary_kind": {
+      "type": "string",
+      "enum": ["custom_endpoint", "gateway", "proxy", "unknown"]
+    },
+    "provider_claim": { "type": ["string", "null"] },
+    "gateway_claim": { "type": ["string", "null"] },
+    "model": { "type": "string", "minLength": 1 },
+    "evidence_class": { "const": "custom_endpoint_compatibility" },
+    "disclaimer": { "type": "string", "minLength": 1 },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "enum": [
+          "declared",
+          "observed_offline",
+          "observed_live",
+          "unsupported",
+          "inconclusive",
+          "not_tested"
+        ]
+      }
+    }
+  }
+}
