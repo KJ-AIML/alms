@@ -1,0 +1,35 @@
+{
+  "lane_id": "openai-compatible-custom",
+  "api_family": "openai_compatible",
+  "sdk_family": "openai",
+  "boundary_kind": "unknown",
+  "evidence_class": "custom_endpoint_compatibility",
+  "disclaimer": "Custom endpoint compatibility evidence is not native-provider evidence. It does not satisfy G2 or G3.",
+  "capabilities": {
+    "text_generation": "observed_offline",
+    "system_or_developer_roles": "observed_offline",
+    "structured_output": "observed_offline",
+    "tool_definitions": "observed_offline",
+    "tool_calls": "observed_offline",
+    "streaming": "observed_offline",
+    "usage_reporting": "observed_offline",
+    "cache_usage": "not_tested",
+    "reasoning_metadata": "not_tested",
+    "model_identity": "observed_offline",
+    "error_taxonomy": "observed_offline",
+    "request_cancellation": "not_tested",
+    "timeout_ownership": "not_tested"
+  },
+  "notes": {
+    "text_generation": "Chat Completions via OpenAI SDK + httpx MockTransport",
+    "structured_output": "response_format.json_schema request mode observed",
+    "tool_calls": "function tool_calls present in endpoint-boundary response",
+    "streaming": "SSE chat.completion.chunk events parsed by SDK",
+    "usage_reporting": "usage present when endpoint returns it; null remains non-zero",
+    "model_identity": "requested and returned model recorded separately",
+    "error_taxonomy": "SDK exception class captured on 404 wire response",
+    "cache_usage": "Chat Completions mock did not expose cache fields",
+    "request_cancellation": "C0 live policy excludes CANCEL-001",
+    "timeout_ownership": "C0 live policy excludes TIMEOUT-001"
+  }
+}

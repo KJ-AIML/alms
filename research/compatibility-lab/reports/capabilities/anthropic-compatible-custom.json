@@ -1,0 +1,36 @@
+{
+  "lane_id": "anthropic-compatible-custom",
+  "api_family": "anthropic_compatible",
+  "sdk_family": "anthropic",
+  "boundary_kind": "unknown",
+  "evidence_class": "custom_endpoint_compatibility",
+  "disclaimer": "Custom endpoint compatibility evidence is not native-provider evidence. It does not satisfy G2 or G3.",
+  "capabilities": {
+    "text_generation": "observed_offline",
+    "system_or_developer_roles": "observed_offline",
+    "structured_output": "observed_offline",
+    "tool_definitions": "observed_offline",
+    "tool_calls": "observed_offline",
+    "streaming": "observed_offline",
+    "usage_reporting": "observed_offline",
+    "cache_usage": "observed_offline",
+    "reasoning_metadata": "not_tested",
+    "model_identity": "observed_offline",
+    "error_taxonomy": "observed_offline",
+    "request_cancellation": "not_tested",
+    "timeout_ownership": "not_tested"
+  },
+  "notes": {
+    "text_generation": "Messages API via Anthropic SDK + httpx MockTransport",
+    "system_or_developer_roles": "top-level system field preserved",
+    "structured_output": "output_config.format json_schema request mode",
+    "tool_calls": "tool_use content blocks preserved (not OpenAI-shaped)",
+    "streaming": "message_start/content_block_*/message_delta/message_stop lifecycle",
+    "usage_reporting": "input_tokens/output_tokens preserved",
+    "cache_usage": "cache_creation_input_tokens and cache_read_input_tokens observed",
+    "model_identity": "requested and returned model recorded separately; null stays unavailable",
+    "error_taxonomy": "SDK exception class captured on 404 wire response",
+    "request_cancellation": "C0 live policy excludes CANCEL-001",
+    "timeout_ownership": "C0 live policy excludes TIMEOUT-001"
+  }
+}

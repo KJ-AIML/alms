@@ -1,0 +1,82 @@
+{
+  "spec": "alms.dev/compatibility-matrix/v0",
+  "evidence_class": "custom_endpoint_compatibility",
+  "disclaimer": "Custom endpoint compatibility evidence is not native-provider evidence. It does not satisfy G2 or G3.",
+  "canonical_lane_context_only": [
+    "openai-native",
+    "anthropic-native",
+    "gemini-native",
+    "langchain",
+    "litellm-sdk",
+    "pydantic-ai-agent"
+  ],
+  "dimensions": [
+    "api_family",
+    "sdk_family",
+    "boundary_kind",
+    "request_shape",
+    "role_mapping",
+    "structured_output_mechanism",
+    "tool_mechanism",
+    "stream_model",
+    "usage_shape",
+    "model_identity",
+    "error_mapping",
+    "retry_ownership",
+    "redirect_behavior",
+    "capability_source",
+    "evidence_mode",
+    "provider_verification"
+  ],
+  "lanes": [
+    {
+      "lane_id": "openai-compatible-custom",
+      "observations": {
+        "api_family": "openai_compatible",
+        "sdk_family": "openai",
+        "boundary_kind": "unknown",
+        "request_shape": "chat.completions.create",
+        "role_mapping": "system_and_user_messages",
+        "structured_output_mechanism": "response_format.json_schema",
+        "tool_mechanism": "function_tool_calls",
+        "stream_model": "chat.completion.chunk_sse",
+        "usage_shape": "prompt_completion_total_tokens",
+        "model_identity": "requested_and_returned_separate",
+        "error_mapping": "sdk_exception_class",
+        "retry_ownership": "sdk_max_retries_0_measured_attempts",
+        "redirect_behavior": "cross_host_rejected",
+        "capability_source": "observed_offline",
+        "evidence_mode": "offline_sdk_transport",
+        "provider_verification": "unverified"
+      }
+    },
+    {
+      "lane_id": "anthropic-compatible-custom",
+      "observations": {
+        "api_family": "anthropic_compatible",
+        "sdk_family": "anthropic",
+        "boundary_kind": "unknown",
+        "request_shape": "messages.create",
+        "role_mapping": "top_level_system_plus_message_blocks",
+        "structured_output_mechanism": "output_config.format.json_schema",
+        "tool_mechanism": "tool_use_content_blocks",
+        "stream_model": "anthropic_message_event_lifecycle",
+        "usage_shape": "input_output_tokens_plus_cache_fields",
+        "model_identity": "requested_and_returned_separate",
+        "error_mapping": "sdk_exception_class",
+        "retry_ownership": "sdk_max_retries_0_measured_attempts",
+        "redirect_behavior": "cross_host_rejected",
+        "capability_source": "observed_offline",
+        "evidence_mode": "offline_sdk_transport",
+        "provider_verification": "unverified"
+      }
+    }
+  ],
+  "native_gate_preservation": {
+    "G2": "blocked_credential",
+    "G3": "blocked_credential",
+    "G7": "not_started",
+    "phase0_complete": false,
+    "phase1_entry_approved": false
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "alms.dev/compatibility-matrix/v0",
+  "title": "Compatibility Lab Matrix",
+  "type": "object",
+  "required": [
+    "spec",
+    "evidence_class",
+    "disclaimer",
+    "lanes",
+    "dimensions",
+    "native_gate_preservation"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "spec": { "const": "alms.dev/compatibility-matrix/v0" },
+    "evidence_class": { "const": "custom_endpoint_compatibility" },
+    "disclaimer": { "type": "string", "minLength": 1 },
+    "lanes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["lane_id", "observations"],
+        "additionalProperties": false,
+        "properties": {
+          "lane_id": {
+            "type": "string",
+            "enum": ["openai-compatible-custom", "anthropic-compatible-custom"]
+          },
+          "observations": {
+            "type": "object",
+            "additionalProperties": { "type": ["string", "boolean", "null"] }
+          }
+        }
+      }
+    },
+    "dimensions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "native_gate_preservation": {
+      "type": "object",
+      "required": ["G2", "G3", "G7", "phase0_complete", "phase1_entry_approved"],
+      "properties": {
+        "G2": { "const": "blocked_credential" },
+        "G3": { "const": "blocked_credential" },
+        "G7": { "const": "not_started" },
+        "phase0_complete": { "const": false },
+        "phase1_entry_approved": { "const": false }
+      }
+    },
+    "canonical_lane_context_only": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
