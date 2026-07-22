@@ -1,0 +1,30 @@
+{
+  "track": "Compatibility Lab C0",
+  "evidence_class": "custom_endpoint_compatibility",
+  "source_branch": "research/runtime-audit-phase0",
+  "source_baseline": "eda7589241dffe96e48c15bea4d4ce95faad3568",
+  "active_branch": "research/custom-endpoint-compatibility-c0",
+  "created_at": "2026-07-22T07:00:00Z",
+  "phase0_preservation": {
+    "mandatory_offline_campaign": "ALL_ELIGIBLE_OFFLINE_WORK_COMPLETE",
+    "G2": "blocked_credential",
+    "G3": "blocked_credential",
+    "G7": "not_started",
+    "L-01": {"severity": "F2", "status": "proposed"},
+    "phase0_complete": false,
+    "p0_8_stress_execution_authorized": false,
+    "phase1_entry_approved": false,
+    "draft_model_runtime_forbidden": true
+  },
+  "lane_identities": [
+    "openai-compatible-custom",
+    "anthropic-compatible-custom"
+  ],
+  "explicit_non_lanes": [
+    "openrouter"
+  ],
+  "notes": [
+    "Do not create an openrouter lane unless endpoint metadata proves OpenRouter.",
+    "Custom endpoint evidence is not native-provider evidence and does not satisfy G2 or G3."
+  ]
+}
