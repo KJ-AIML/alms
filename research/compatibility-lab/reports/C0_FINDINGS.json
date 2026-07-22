@@ -1,0 +1,40 @@
+{
+  "track": "Compatibility Lab C0",
+  "evidence_class": "custom_endpoint_compatibility",
+  "disclaimer": "Custom endpoint compatibility evidence is not native-provider evidence. It does not satisfy G2 or G3.",
+  "findings": [
+    {
+      "id": "C0-F-001",
+      "severity": "info",
+      "title": "SDK materializes absent optional fields as null",
+      "status": "accepted_observation",
+      "summary": "OpenAI and Anthropic SDKs may expose missing usage/model as null rather than omitting keys. Compatibility evidence treats null as unavailable and does not fabricate zeros or copy requested model.",
+      "evidence": [
+        "probes/openai-compatible-custom/tests/test_offline_lane.py::test_missing_fields_stay_missing",
+        "probes/anthropic-compatible-custom/tests/test_offline_lane.py::test_returned_model_and_missing_model"
+      ],
+      "native_gate_impact": "none"
+    },
+    {
+      "id": "C0-F-002",
+      "severity": "info",
+      "title": "Provenance decision B — additive endpoint_boundary",
+      "status": "accepted",
+      "summary": "Existing nine-term central provenance vocabulary is not mutated. Endpoint-owned fields use additive endpoint_boundary ownership in compatibility artifacts.",
+      "evidence": [
+        "docs/C0_ENDPOINT_IDENTITY_AND_PROVENANCE.md",
+        "harness/src/alms_compat/identity.py"
+      ],
+      "native_gate_impact": "none"
+    }
+  ],
+  "security_incidents": [],
+  "native_gates": {
+    "G2": "blocked_credential",
+    "G3": "blocked_credential",
+    "G7": "not_started",
+    "L-01": { "severity": "F2", "status": "proposed" },
+    "phase0_complete": false,
+    "phase1_entry_approved": false
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "track": "Compatibility Lab C0",
+  "disclaimer": "Custom endpoint compatibility evidence is not native-provider evidence. It does not satisfy G2 or G3.",
+  "decisions": [
+    {
+      "id": "C0-D-001",
+      "topic": "workstream_separation",
+      "decision": "C0 is a separate evidence class from Phase 0 native lanes",
+      "rationale": "Custom/gateway endpoints must not close G2/G3"
+    },
+    {
+      "id": "C0-D-002",
+      "topic": "openai_api_surface",
+      "decision": "openai-compatible-custom uses Chat Completions, not Responses API",
+      "rationale": "Most custom/gateway endpoints expose /v1/chat/completions"
+    },
+    {
+      "id": "C0-D-003",
+      "topic": "lane_identity",
+      "decision": "No openrouter lane ID unless endpoint metadata proves OpenRouter",
+      "rationale": "Do not infer commercial service from API shape or model ID"
+    },
+    {
+      "id": "C0-D-004",
+      "topic": "provenance_vocabulary",
+      "decision": "B — additive endpoint_boundary field is sufficient",
+      "rationale": "Avoid false provider_native labels without mutating central nine-term enum"
+    },
+    {
+      "id": "C0-D-005",
+      "topic": "offline_transport",
+      "decision": "Real SDK over httpx.MockTransport",
+      "rationale": "Exercises request construction and response parsing without live network"
+    },
+    {
+      "id": "C0-D-006",
+      "topic": "live_validation",
+      "decision": "BLOCKED_CONFIGURATION — no fake live evidence",
+      "rationale": "Fresh ALMS_COMPAT_* live configuration absent in environment"
+    },
+    {
+      "id": "C0-D-007",
+      "topic": "D-006",
+      "decision": "Authorized and implemented as separate compatibility track",
+      "rationale": "User-authorized activation; not native evidence"
+    }
+  ]
+}
